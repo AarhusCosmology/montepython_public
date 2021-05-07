@@ -1,0 +1,3 @@
+info.redefine = {'gal545_A_143_217': 'omega_ini_dcdm+omega_cdm','gal545_A_217': 'omega_ini_dcdm/(omega_cdm+omega_ini_dcdm)','gal545_A_143': '10**log10_Gamma_dcdm_Gyr*(omega_ini_dcdm)/(omega_cdm+omega_ini_dcdm)'}
+info.to_change = {'gal545_A_217': '$f$', 'gal545_A_143': '$\Gamma f_{\mathrm{dcdm}}[\mathrm{Gyr}^{-1}]$', 'gal545_A_143_217': '$\omega^{\mathrm{ini}}_{\mathrm{cdm}}$','log10_Gamma_dcdm_Gyr': '$log_{10}(\Gamma_{\mathrm{dcdm}}[\mathrm{Gyr}^{-1}])$'}
+info.to_plot = ['$\omega^{\mathrm{ini}}_{\mathrm{cdm}}$','$f$', '$log_{10}(\Gamma_{\mathrm{dcdm}}[\mathrm{Gyr}^{-1}])$', '$\Gamma f_{\mathrm{dcdm}}[\mathrm{Gyr}^{-1}]$', 'H0','omega_b','omega_cdm','omega_ini_dcdm','ln10^{10}A_s','n_s','tau_reio','z_reio','Omega_Lambda','YHe','A_s','sigma8']
