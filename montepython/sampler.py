@@ -45,6 +45,10 @@ def run(cosmo, data, command_line):
         import mcmc
         mcmc.chain(cosmo, data, command_line)
         data.out.close()
+    elif command_line.method == 'HMC':
+        assert("RUNS WITH EMULATOR.")
+        import HamiltonianMonteCarlo as hmc
+        hmc.run(cosmo, data, command_line)
     elif command_line.method == 'NS':
         import MultiNest as mn
         mn.run(cosmo, data, command_line)

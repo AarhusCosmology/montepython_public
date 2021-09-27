@@ -224,7 +224,10 @@ class Data(object):
                     "I will use the one from log.param.")
 
         # Determine which cosmological code is in use
-        if os.path.isfile(self.path['cosmo']+'/main/class.c'):
+        emulator = False # In the future, this should be a setting on running
+        if emulator:
+            self.cosmological_module_name = 'EMULATOR'
+        elif os.path.isfile(self.path['cosmo']+'/main/class.c'):
             self.cosmological_module_name = 'CLASS'
         else:
             self.cosmological_module_name = None
@@ -304,6 +307,8 @@ class Data(object):
                     # failed - due to comparing to an old log.param that did
                     # not have this feature properly implemented. Ignore this.
                     pass
+        elif self.cosmological_module_name == 'EMULATOR':
+            # Setup emulator settings with inspiration from the above.
 
         else:
             raise io_mp.CosmologicalModuleError(
