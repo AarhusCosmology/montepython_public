@@ -747,7 +747,7 @@ def create_parser():
     # -- sampling method (OPTIONAL)
     runparser.add_argument('-m', '--method', help=helpdict['m'],
                            dest='method', default='MH',
-                           choices=['MH', 'NS', 'PC', 'CH', 'IS', 'Der', 'Fisher'])
+                           choices=['MH', 'HMC', 'NS', 'PC', 'CH', 'IS', 'Der', 'Fisher'])
     # -- update Metropolis Hastings (OPTIONAL)
     runparser.add_argument('--update', help=helpdict['update'], type=int,
                            dest='update', default=50)

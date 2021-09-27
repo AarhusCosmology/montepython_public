@@ -46,6 +46,7 @@ def run(cosmo, data, command_line):
         mcmc.chain(cosmo, data, command_line)
         data.out.close()
     elif command_line.method == 'HMC':
+        print("Attemping to run with HMC method.")
         assert("RUNS WITH VALID EMULATOR.")
         import HamiltonianMonteCarlo as hmc
         hmc.chain(cosmo, data, command_line)

@@ -224,9 +224,9 @@ class Data(object):
                     "I will use the one from log.param.")
 
         # Determine which cosmological code is in use
-        emulator = False # In the future, this should be a setting on running
-        if emulator:
+        if self.command_line.method == 'HMC':
             self.cosmological_module_name = 'EMULATOR'
+            print("SET CODE TO EMULATOR")
         elif os.path.isfile(self.path['cosmo']+'/main/class.c'):
             self.cosmological_module_name = 'CLASS'
         else:
@@ -309,7 +309,7 @@ class Data(object):
                     pass
         elif self.cosmological_module_name == 'EMULATOR':
             # Setup emulator settings with inspiration from the above.
-
+            print("Attemping to use emulator.")
         else:
             raise io_mp.CosmologicalModuleError(
                 "Could not find any of the registered cosmological modules, such as {CLASS}."
