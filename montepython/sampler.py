@@ -150,13 +150,13 @@ def read_args_from_bestfit(data, bestfit):
             data.mcmc_parameters[elem]['last_accepted'] = \
                 bestfit_values[bestfit_names.index(elem)] / \
                 data.mcmc_parameters[elem]['scale']
-            print('from best-fit file : {} = '.format(elem))
+            sys.stdout.write('from best-fit file : ', elem, ' = ')
             print(bestfit_values[bestfit_names.index(elem)] / \
                 data.mcmc_parameters[elem]['scale'])
         else:
             data.mcmc_parameters[elem]['last_accepted'] = \
                 data.mcmc_parameters[elem]['initial'][0]
-            print('from input file : {} = '.format(elem))
+            sys.stdout.write('from input file    : ', elem, ' = ')
             print(data.mcmc_parameters[elem]['initial'][0])
 
 
@@ -339,7 +339,7 @@ def get_covariance_matrix(cosmo, data, command_line):
 
     # Final print out, the actually used covariance matrix
     if not command_line.silent and not command_line.quiet:
-        print('\nDeduced starting covariance matrix:\n')
+        sys.stdout.write('\nDeduced starting covariance matrix:\n')
         print(parameter_names)
         print(matrix)
 
@@ -691,6 +691,7 @@ def compute_lkl(cosmo, data):
 
     """
     from classy import CosmoSevereError, CosmoComputationError
+    from time import time
 
     # If the cosmological module has already been called once, and if the
     # cosmological parameters have changed, then clean up, and compute.
@@ -773,7 +774,9 @@ def compute_lkl(cosmo, data):
 
     for likelihood in dictvalues(data.lkl):
         if likelihood.need_update is True:
+            t0 = time()
             value = likelihood.loglkl(cosmo, data)
+            #print(time()-t0)
             # Storing the result
             likelihood.backup_value = value
         # Otherwise, take the existing value

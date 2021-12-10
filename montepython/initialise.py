@@ -151,6 +151,8 @@ def recover_cosmological_module(data):
         Only CLASS is currently wrapped, but a python wrapper of CosmoMC should
         enter here.
 
+        CONNECT has been added as cosmological module
+
     """
     # Importing the python-wrapped CLASS from the correct folder, defined in
     # the .conf file, or overwritten at this point by the log.param.
@@ -183,6 +185,18 @@ def recover_cosmological_module(data):
                 "python setup.py build")
 
         cosmo = Class()
+
+    elif data.cosmological_module_name == 'CONNECT':
+        try:
+            from connect_hybrid import Connect
+        except ImportError:
+            raise io_mp.MissingLibraryError(
+            "You must have compiled the connect_hybrid module. " +
+            "Please go to /path/to/connect/python_wrapper and run the command\n " +
+            "python setup.py install")
+        
+        cosmo = Connect()
+
     else:
         raise io_mp.ConfigurationError(
             "Unrecognised cosmological module. " +

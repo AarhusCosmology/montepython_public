@@ -224,8 +224,11 @@ class Data(object):
                     "I will use the one from log.param.")
 
         # Determine which cosmological code is in use
-        if os.path.isfile(self.path['cosmo']+'/main/class.c'):
-            self.cosmological_module_name = 'CLASS'
+        if os.path.isfile(self.path['cosmo']+'/main/class.c') or os.path.isfile(self.path['cosmo']+'/main/class.cpp'):
+            if 'connect' in self.path:
+                self.cosmological_module_name = 'CONNECT'
+            else:
+                self.cosmological_module_name = 'CLASS'
         else:
             self.cosmological_module_name = None
 
@@ -241,7 +244,7 @@ class Data(object):
         # Recover the cosmological code version (and git hash if relevant).
         # To implement a new cosmological code, please add another case to the
         # test below.
-        if self.cosmological_module_name == 'CLASS':
+        if self.cosmological_module_name == 'CLASS' or self.cosmological_module_name == 'CONNECT':
             # Official version number
             common_file_path = os.path.join(
                 self.path['cosmo'], 'include', 'common.h')
@@ -304,6 +307,17 @@ class Data(object):
                     # failed - due to comparing to an old log.param that did
                     # not have this feature properly implemented. Ignore this.
                     pass
+
+            if self.cosmological_module_name == 'CONNECT':
+                # Official version number
+                version_file_path = os.path.join(self.path['connect'], 'python_wrapper', 'setup.py')
+                with open(version_file_path, 'r') as version_file:
+                    for line in version_file:
+                        if line.find('version') != -1:
+                            self.version = line.split('version')[-1].split('=')[-1].split('"')[1]
+                            break
+                if not command_line.silent and not rank:
+                    print('with connect_hybrid %s' % self.version)
 
         else:
             raise io_mp.CosmologicalModuleError(
@@ -396,14 +410,9 @@ class Data(object):
 
         # Test here whether the number of parameters extracted correspond to
         # the number of lines (to make sure no doublon is present)
-        # Changed to ignore '#' after a data.parameters[x]=y line
-        number_of_parameters=0
-        for line in open(self.param,'r'):
-          if(line):
-            if(line.find("#") != -1):
-              line = line.split("#")[0]
-            if(line.find('data.parameters[') != -1):
-              number_of_parameters+=1
+        number_of_parameters = sum(
+            [1 for l in open(self.param, 'r') if l and l.find('#') == -1
+             and l.find('data.parameters[') != -1])
         if number_of_parameters != len(self.parameters):
             raise io_mp.ConfigurationError(
                 "You probably have two lines in your parameter files with "
@@ -413,11 +422,9 @@ class Data(object):
         # Do the same for every experiments - but only if you are starting a
         # new folder. Otherwise, this step will actually be done when
         # initializing the likelihood.
-
-        # [NS] the below line is not currently used to avoid a bug with using inputs from the param file
-        # if self.param.find('log.param') == -1:
-        for experiment in self.experiments:
-            self.read_file(self.param, experiment, separate=True)
+        if self.param.find('log.param') == -1:
+            for experiment in self.experiments:
+                self.read_file(self.param, experiment, separate=True)
 
         # Finally create all the instances of the Parameter given the input.
         for key, value in dictitems(self.parameters):
@@ -470,7 +477,6 @@ class Data(object):
             # add the folder of the likelihood to the path of libraries to...
             # ... import easily the likelihood.py program
             try:
-                sys.path.insert(0, os.path.abspath(self.path['MontePython']))
                 exec("from likelihoods.%s import %s" % (
                     elem, elem))
             except ImportError as message:
@@ -499,14 +505,6 @@ class Data(object):
                 else:
                     raise io_mp.ConfigurationError(
                         "The following key: '%s' was not found" % e)
-
-    # Custom function to replace string occurances
-    replace_string_type = []
-    def replace_string_occurance(self,m):
-        if m.group(1) is None:
-            return m.group()
-        else:
-            return m.group().replace(self.replace_string_type[0],self.replace_string_type[1])
 
     def read_file(self, param, structure, field='', separate=False):
         """
@@ -553,10 +551,7 @@ class Data(object):
             exec("self.%s = Container()" % structure)
         with open(param, 'r') as param_file:
             for line in param_file:
-                if line:
-                    # Only use contents in param_file before any '#' character
-                    if line.find("#") != -1:
-                        line = line.split("#")[0]
+                if line.find('#') == -1 and line:
                     lhs = line.split('=')[0]
                     if lhs.find(structure+'.') != -1:
                         if field:
@@ -565,14 +560,11 @@ class Data(object):
                             # do not find the exact searched field
                             if lhs.find('.'.join([structure, field])) == -1:
                                 continue
-                            self.replace_string_type = [structure+'.','self.']
-                        elif structure == "data":
-                            self.replace_string_type = [structure+'.','self.']
+                        if not separate:
+                            exec(line.replace(structure+'.', 'self.').rstrip())
                         else:
-                            self.replace_string_type = [structure+'.','self.'+structure+'.']
-                        # With this we can read from inside a .param file
-                        statement = re.sub(r"'[^']*'|([^']*)", self.replace_string_occurance, line) #Only replace outside of quotation marks
-                        exec(statement.rstrip())
+                            exec(line.replace(
+                                structure+'.', 'self.'+structure+'.').rstrip())
 
     def group_parameters_in_blocks(self):
         """
@@ -824,6 +816,16 @@ class Data(object):
                 Omega_L = self.cosmo_arguments['Omega_L']
                 self.cosmo_arguments['omega_cdm'] = (1.-Omega_L)*h*h-omega_b
                 del self.cosmo_arguments[elem]
+            # infer omega_cdm from omega_m (assuming one standard massive neutrino and omega_nu=m_nu/93.14) and delete omega_m
+            elif elem == 'omega_m':
+                omega_b = self.cosmo_arguments['omega_b']
+                omega_m = self.cosmo_arguments['omega_m']
+                try:
+                    omega_nu = self.cosmo_arguments['m_ncdm'] / 93.14
+                except:
+                    omega_nu = 0.
+                self.cosmo_arguments['omega_cdm'] = omega_m - omega_b - omega_nu
+                del self.cosmo_arguments[elem]
             elif elem == 'ln10^{10}A_s':
                 self.cosmo_arguments['A_s'] = math.exp(
                     self.cosmo_arguments[elem]) / 1.e10
@@ -915,74 +917,6 @@ class Data(object):
                 #self.cosmo_arguments['m_ncdm__2'] = self.cosmo_arguments['deg_ncdm__2']*self.cosmo_arguments[elem]
                 m_s_eff = self.cosmo_arguments[elem]/self.cosmo_arguments['deg_ncdm__2']
                 self.cosmo_arguments['m_ncdm'] = r'%g, %g' % (float(self.cosmo_arguments['m_ncdm']), m_s_eff)
-                del self.cosmo_arguments[elem]
-            # infer omega_cdm from omega_m (assuming one standard massive neutrino and omega_nu=m_nu/93.14) and delete omega_m
-            # [NS] moved after the determination of self.cosmo_arguments['m_ncdm']
-            elif elem == 'omega_m':
-                omega_m = self.cosmo_arguments['omega_m']
-                if "N_ncdm" in self.cosmo_arguments and self.cosmo_arguments["N_ncdm"]>0:
-                    if "m_ncdm" in self.cosmo_arguments:
-                      omega_nu = self.cosmo_arguments['m_ncdm'] / 93.14
-                    elif "omega_ncdm" in self.cosmo_arguments:
-                      omega_nu = self.cosmo_arguments['omega_ncdm']
-                    elif "Omega_ncdm" in self.cosmo_arguments:
-                      if "h" in self.cosmo_arguments:
-                        omega_nu = self.cosmo_arguments['Omega_ncdm']*self.cosmo_arguments['h']**2
-                      elif "H0" in self.cosmo_arguments:
-                        omega_nu = self.cosmo_arguments['Omega_ncdm']*(self.cosmo_arguments['H0']/100.)**2
-                      else:
-                        raise ValueError("Could not find H directy, since none of {h,H0} are defined")
-                    else:
-                      raise ValueError("N_ncdm is greater than 0, but couldn't identify any of {m_ncdm,omega_ncdm,Omega_ncdm}")
-                else:
-                    omega_nu = 0.
-                if "omega_b" in self.cosmo_arguments:
-                  omega_b = self.cosmo_arguments['omega_b']
-                elif "Omega_b" in self.cosmo_arguments:
-                  if "h" in self.cosmo_arguments:
-                    omega_b = self.cosmo_arguments['Omega_b']*self.cosmo_arguments['h']**2
-                  elif "H0" in self.cosmo_arguments:
-                    omega_b = self.cosmo_arguments['Omega_b']*(self.cosmo_arguments['H0']/100.)**2
-                  else:
-                    raise ValueError("Could not find H directy, since none of {h,H0} are defined")
-                else:
-                  raise ValueError("Could not indentify any of {omega_b,Omega_b} for the definition of omega_m")
-                self.cosmo_arguments['omega_cdm'] = omega_m - omega_b - omega_nu
-                del self.cosmo_arguments[elem]
-            # Same as for 'omega_m', just with 'Omega_m' instead
-            elif elem == 'Omega_m':
-                Omega_m = self.cosmo_arguments['Omega_m']
-                if "N_ncdm" in self.cosmo_arguments and self.cosmo_arguments["N_ncdm"]>0:
-                    omega_nu = 0.
-                    if "m_ncdm" in self.cosmo_arguments:
-                      omega_nu = self.cosmo_arguments['m_ncdm'] / 93.14
-                    elif "omega_ncdm" in self.cosmo_arguments:
-                      omega_nu = self.cosmo_arguments['omega_ncdm']
-                    if "h" in self.cosmo_arguments:
-                      Omega_nu = omega_nu/(self.cosmo_arguments['h']**2)
-                    elif "H0" in self.cosmo_arguments:
-                      Omega_nu = omega_nu/(self.cosmo_arguments['H0']/100.)**2
-                    else:
-                      raise ValueError("Could not find H directy, since none of {h,H0} are defined")
-                    if omega_nu ==0.:
-                      if "Omega_ncdm" in self.cosmo_arguments:
-                        Omega_nu = self.cosmo_arguments["Omega_ncdm"]
-                      else:
-                        raise ValueError("N_ncdm is greater than 0, but couldn't identify any of {m_ncdm,omega_ncdm,Omega_ncdm}")
-                else:
-                    Omega_nu = 0.
-                if "Omega_b" in self.cosmo_arguments:
-                  Omega_b = self.cosmo_arguments['Omega_b']
-                elif "omega_b" in self.cosmo_arguments:
-                  if "h" in self.cosmo_arguments:
-                    Omega_b = self.cosmo_arguments['omega_b']/self.cosmo_arguments['h']**2
-                  elif "H0" in self.cosmo_arguments:
-                    Omega_b = self.cosmo_arguments['omega_b']/(self.cosmo_arguments['H0']/100.)**2
-                  else:
-                    raise ValueError("Could not find H directy, since none of {h,H0} are defined")
-                else:
-                  raise ValueError("Could not indentify any of {omega_b,Omega_b} for the definition of Omega_m")
-                self.cosmo_arguments['Omega_cdm'] = Omega_m - Omega_b - Omega_nu
                 del self.cosmo_arguments[elem]
             elif elem == 'log10N_dg':
                 self.cosmo_arguments['N_dg'] = 10**(self.cosmo_arguments[elem])
