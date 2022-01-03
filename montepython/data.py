@@ -203,6 +203,16 @@ class Data(object):
         self.out = None
         self.out_name = ''
 
+        # Default settings for creation of data to CONNECT
+        self.create_NN_data = False
+        self.output_Cl = []
+        self.last_accepted_cls = {}
+        self.current_cls = {}
+        # Create the variable out_cls, and out_cls_name, which will be initialised
+        # later by the :mod:`io_mp` module if create_NN_data is True
+        self.out_cls = {}
+        self.out_cls_name = {}
+
         # If the parameter file is not a log.param, the path will be read
         # before reading the parameter file.
         if self.param.find('log.param') == -1:
@@ -222,6 +232,7 @@ class Data(object):
                     "Your code location in the log.param file is "
                     "in contradiction with your .conf file. "
                     "I will use the one from log.param.")
+
 
         # Determine which cosmological code is in use
         if os.path.isfile(self.path['cosmo']+'/main/class.c') or os.path.isfile(self.path['cosmo']+'/main/class.cpp'):
@@ -310,7 +321,7 @@ class Data(object):
 
             if self.cosmological_module_name == 'CONNECT':
                 # Official version number
-                version_file_path = os.path.join(self.path['connect'], 'python_wrapper', 'setup.py')
+                version_file_path = os.path.join(self.path['connect'], 'python_wrapper_hybrid', 'setup.py')
                 with open(version_file_path, 'r') as version_file:
                     for line in version_file:
                         if line.find('version') != -1:
