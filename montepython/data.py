@@ -203,6 +203,7 @@ class Data(object):
         self.out = None
         self.out_name = ''
 
+        """
         # Default settings for creation of data to CONNECT
         self.create_NN_data = False
         self.output_Cl = []
@@ -212,6 +213,9 @@ class Data(object):
         # later by the :mod:`io_mp` module if create_NN_data is True
         self.out_cls = {}
         self.out_cls_name = {}
+        # Initialise neural network model used by CONNECT
+        #self.connect_model = None
+        """
 
         # If the parameter file is not a log.param, the path will be read
         # before reading the parameter file.
@@ -235,11 +239,11 @@ class Data(object):
 
 
         # Determine which cosmological code is in use
-        if os.path.isfile(self.path['cosmo']+'/main/class.c') or os.path.isfile(self.path['cosmo']+'/main/class.cpp'):
-            if 'connect' in self.path:
-                self.cosmological_module_name = 'CONNECT'
-            else:
-                self.cosmological_module_name = 'CLASS'
+        if os.path.isfile(self.path['cosmo']+'/main/class.c'):### or os.path.isfile(self.path['cosmo']+'/main/class.cpp'):
+            ###if 'connect' in self.path:
+            ###    self.cosmological_module_name = 'CONNECT'
+            ###else:
+            self.cosmological_module_name = 'CLASS'
         else:
             self.cosmological_module_name = None
 
@@ -255,7 +259,7 @@ class Data(object):
         # Recover the cosmological code version (and git hash if relevant).
         # To implement a new cosmological code, please add another case to the
         # test below.
-        if self.cosmological_module_name == 'CLASS' or self.cosmological_module_name == 'CONNECT':
+        if self.cosmological_module_name == 'CLASS':#### or self.cosmological_module_name == 'CONNECT':
             # Official version number
             common_file_path = os.path.join(
                 self.path['cosmo'], 'include', 'common.h')
@@ -318,18 +322,18 @@ class Data(object):
                     # failed - due to comparing to an old log.param that did
                     # not have this feature properly implemented. Ignore this.
                     pass
-
+            """
             if self.cosmological_module_name == 'CONNECT':
                 # Official version number
-                version_file_path = os.path.join(self.path['connect'], 'python_wrapper_hybrid', 'setup.py')
+                version_file_path = os.path.join(self.path['connect'], 'python_wrapper', 'setup.py')
                 with open(version_file_path, 'r') as version_file:
                     for line in version_file:
                         if line.find('version') != -1:
                             self.version = line.split('version')[-1].split('=')[-1].split('"')[1]
                             break
                 if not command_line.silent and not rank:
-                    print('with connect_hybrid %s' % self.version)
-
+                    print('with connect %s' % self.version)
+            """
         else:
             raise io_mp.CosmologicalModuleError(
                 "Could not find any of the registered cosmological modules, such as {CLASS}."

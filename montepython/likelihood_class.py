@@ -22,7 +22,7 @@ import scipy.misc
 
 import io_mp
 from io_mp import dictitems,dictvalues,dictkeys
-from time import time
+
 
 class Likelihood(object):
     """
@@ -202,7 +202,7 @@ class Likelihood(object):
             elif key in ['tp', 'ep']:
                 cl[key] *= (T*1.e6)
         return cl
-
+    """
     def get_cl_create_NN_data(self, cosmo, l_max=-1):
         cl = cosmo.lensed_cl(int(l_max))
         Dl = cosmo.lensed_cl_computed()
@@ -217,6 +217,7 @@ class Likelihood(object):
             elif key in ['tp', 'ep']:
                 cl[key] *= (T*1.e6)
         return cl, Dl
+    """
 
     def get_unlensed_cl(self, cosmo, l_max=-1):
         """
@@ -960,15 +961,16 @@ class Likelihood_clik(Likelihood):
 
     def loglkl(self, cosmo, data):
         
-        t0 = time()
         nuisance_parameter_names = data.get_mcmc_parameters(['nuisance'])
 
+        """
         # get Cl's from the cosmological code
         if data.create_NN_data:
             cl, Dl = self.get_cl_create_NN_data(cosmo)
             data.current_cls = Dl
         else:
-            cl = self.get_cl(cosmo)
+        """
+        cl = self.get_cl(cosmo)
 
         # testing for lensing
         if self.lensing:
@@ -1063,20 +1065,14 @@ class Likelihood_clik(Likelihood):
             #print("found one nuisance with name",nuisance)
             tot[index] = nuisance_value
             index += 1
-        t1 = time()
 
 
         # compute likelihood
-        #print("lkl:",self.clik(tot))
-        t0 = time()
         lkl = self.clik(tot)[0]
-        t1 = time()
 
-        t0 = time()
         # add prior on nuisance parameters
         lkl = self.add_nuisance_prior(lkl, data)
 
-        t1 = time()
 
         # Option added by D.C. Hooper to deal with the joint prior on ksz_norm (A_ksz in Planck notation)
         # and A_sz (A_tsz in Planck notation), of the form ksz_norm + 1.6 * A_sz (according to eq. 23 of 1907.12875).

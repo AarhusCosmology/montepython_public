@@ -2,7 +2,7 @@
 .. module:: initialise
     :synopsis: intialisation
 .. moduleauthor:: Benjamin Audren <benjamin.audren@epfl.ch>
-
+1;95;0c
 """
 from __future__ import print_function
 import io_mp
@@ -185,10 +185,10 @@ def recover_cosmological_module(data):
                 "python setup.py build")
 
         cosmo = Class()
-
+        """
     elif data.cosmological_module_name == 'CONNECT':
         try:
-            from connect_hybrid import Connect
+            from connect import Connect
         except ImportError:
             raise io_mp.MissingLibraryError(
             "You must have compiled the connect_hybrid module. " +
@@ -196,7 +196,7 @@ def recover_cosmological_module(data):
             "python setup.py install")
         
         cosmo = Connect()
-
+        """
     else:
         raise io_mp.ConfigurationError(
             "Unrecognised cosmological module. " +

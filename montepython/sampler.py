@@ -641,8 +641,10 @@ def accept_step(data):
     one.
 
     """
+    """
     if data.create_NN_data:
         data.last_accepted_cls = data.current_cls
+    """
     for elem in data.get_mcmc_parameters(['varying']):
         data.mcmc_parameters[elem]['last_accepted'] = \
             data.mcmc_parameters[elem]['current']
@@ -693,7 +695,6 @@ def compute_lkl(cosmo, data):
 
     """
     from classy import CosmoSevereError, CosmoComputationError
-    from time import time
 
     # If the cosmological module has already been called once, and if the
     # cosmological parameters have changed, then clean up, and compute.
@@ -749,10 +750,7 @@ def compute_lkl(cosmo, data):
                     "You interrupted execution")
         else:
             try:
-                t0 = time()
                 cosmo.compute(["lensing"])
-                t1 = time()
-                #print('cosmo compute:',t1-t0)
             except CosmoComputationError as failure_message:
                 # could be useful to uncomment for debugging:
                 #np.set_printoptions(precision=30, linewidth=150)
@@ -777,13 +775,9 @@ def compute_lkl(cosmo, data):
     # this case, the log likelihood returned will be '1j', meaning the
     # imaginary number i.
     flag_wrote_fiducial = 0
-    t0 = time()
     for likelihood in dictvalues(data.lkl):
         if likelihood.need_update is True:
-            t2 = time()
             value = likelihood.loglkl(cosmo, data)
-            t3 = time()
-            #print('individual lkl:',t3-t2)
             # Storing the result
             likelihood.backup_value = value
         # Otherwise, take the existing value
@@ -844,8 +838,7 @@ def compute_lkl(cosmo, data):
                 "corresponding files that all fiducial parameters are consistent "+
                 "with each other. If everything looks fine, "
                 "you may now start a new run.")
-    t1 = time()
-    #print('lkl call:',t1-t0)
+
     return loglike/data.command_line.temperature
 
 

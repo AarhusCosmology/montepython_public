@@ -230,15 +230,25 @@ def print_vector(out, N, loglkl, data):
                          data.mcmc_parameters[elem]['last_accepted'])
         out[j].write('\n')
 
+    """
     if data.create_NN_data:
         for out_cl in data.output_Cl:
-            for ell in data.last_accepted_cls['ell']:
-                data.out_cls[out_cl].write('%.4g\t' % ell[2:])
-            data.out_cls[out_cl].write('\n')
-            for cl in data.last_accepted_cls[out_cl]:
-                data.out_cls[out_cl].write('%.16e\t' % cl[2:])
-            data.out_cls[out_cl].write('\n')
-
+            for ell in data.last_accepted_cls['ell'][2:]:
+                data.out_cls[out_cl].write('%.4g' % ell)
+                if ell == data.last_accepted_cls['ell'][-1]:
+                    data.out_cls[out_cl].write('\n')
+                else:
+                    data.out_cls[out_cl].write('\t')
+            for i, cl in enumerate(data.last_accepted_cls[out_cl][2:]): 
+                # must be done with indices since the Cls are not a 
+                # purely increasing function (Cls at different ells 
+                # can have the same value)
+                data.out_cls[out_cl].write('%.16e' % cl)
+                if i == len(data.last_accepted_cls[out_cl][2:])-1:
+                    data.out_cls[out_cl].write('\n')
+                else:
+                    data.out_cls[out_cl].write('\t')
+    """
 
 def refresh_file(data):
     """
@@ -294,25 +304,33 @@ def create_output_files(command_line, data):
             command_line.folder, outname_base)+str(suffix)+'.txt'
 
         print('Creating %s\n' % data.out_name)
+        """
         if data.create_NN_data:
+            if not os.path.isdir(os.path.join(command_line.folder, 'Cl_data')):
+                os.mkdir(os.path.join(command_line.folder, 'Cl_data'))
             for out_cl in data.output_Cl:
                 data.out_cls_name[out_cl] = os.path.join(
-                    command_line.folder, outname_base)+str(suffix)+'_Cl_'+out_cl+'.txt'
+                    command_line.folder, 'Cl_data', outname_base)+str(suffix)+'_Cl_'+out_cl+'.txt'
                 data.out_cls[out_cl] = open(data.out_cls_name[out_cl], 'w')
                 lock(data.out_cls[out_cl], fcntl.LOCK_EX | fcntl.LOCK_NB)
                 print('Also creating %s\n' % data.out_cls_name[out_cl])
+        """
 
     else:
         data.out_name = os.path.join(
             command_line.folder, outname_base)+command_line.chain_number+'.txt'
         data.out = open(data.out_name, 'w')
         print('Creating %s\n' % data.out_name)
+        """
         if data.create_NN_data:
+            if not os.path.isdir(os.path.join(command_line.folder, 'Cl_data')):
+                os.mkdir(os.path.join(command_line.folder, 'Cl_data'))
             for out_cl in data.output_Cl:
                 data.out_cls_name[out_cl] = os.path.join(
-                    command_line.folder, outname_base)+command_line.chain_number+'_Cl_'+out_cl+'.txt'
+                    command_line.folder, 'Cl_data', outname_base)+command_line.chain_number+'_Cl_'+out_cl+'.txt'
                 data.out_cls[out_cl] = open(data.out_cls_name[out_cl], 'w')
                 print('Also creating %s\n' % data.out_cls_name[out_cl])
+        """
 
     # in case of a restart, copying the whole thing in the new file
     if command_line.restart is not None:
