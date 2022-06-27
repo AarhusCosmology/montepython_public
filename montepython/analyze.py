@@ -569,7 +569,7 @@ def compute_posterior(information_instances):
                 if not info.volume:
                     weights = info.chain[:, 0]
                 else:
-                    weights = info.chain[:, 0]*np.exp(info.chain[:, 1])
+                    weights = info.chain[:, 0]*np.exp(info.chain[:, 1] - conf.min_minus_lkl)
 
                 info.hist, info.bin_edges = np.histogram(
                     # TB: without posterior_smoothing it can be nice to increase the
@@ -596,8 +596,9 @@ def compute_posterior(information_instances):
 
                 # minimum credible interval (method by Jan Hamann). Fails for
                 # multimodal histograms
-                bounds = minimum_credible_intervals(info)
-                info.bounds[info.native_index] = bounds
+                if not info.volume:
+                    bounds = minimum_credible_intervals(info)
+                    info.bounds[info.native_index] = bounds
 
         # plotting
         for info in information_instances:
@@ -881,7 +882,7 @@ def compute_posterior(information_instances):
                         if not info.volume:
                             weights = info.chain[:, 0]
                         else:
-                            weights = info.chain[:, 0]*np.exp(info.chain[:, 1])
+                            weights = info.chain[:, 0]*np.exp(info.chain[:, 1] - conf.min_minus_lkl)
 
                         info.n, info.xedges, info.yedges = np.histogram2d(
                             info.chain[:, info.native_index+2],
