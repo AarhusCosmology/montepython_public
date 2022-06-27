@@ -566,12 +566,18 @@ def compute_posterior(information_instances):
                 #
                 # simply the histogram from the chains, with few bins
                 #
+                if not info.volume:
+                    weights = info.chain[:, 0]
+                else:
+                    weights = info.chain[:, 0]*np.exp(info.chain[:, 1])
+
                 info.hist, info.bin_edges = np.histogram(
                     # TB: without posterior_smoothing it can be nice to increase the
                     # number of bins here.
                     info.chain[:, info.native_index+2], bins=info.bins,
                     #info.chain[:, info.native_index+2], bins=2*info.bins,
-                    weights=info.chain[:, 0], normed=False, density=False)
+                    weights=weights, normed=False, density=False)
+
                 info.hist = info.hist/info.hist.max()
                 # Correct for temperature
                 info.hist = info.hist**conf.temperature
@@ -872,10 +878,15 @@ def compute_posterior(information_instances):
                         #
                         # simply the histogram from the chains, with few bins only
                         #
+                        if not info.volume:
+                            weights = info.chain[:, 0]
+                        else:
+                            weights = info.chain[:, 0]*np.exp(info.chain[:, 1])
+
                         info.n, info.xedges, info.yedges = np.histogram2d(
                             info.chain[:, info.native_index+2],
                             info.chain[:, info.native_second_index+2],
-                            weights=info.chain[:, 0],
+                            weights=weights,
                             bins=(info.bins, info.bins),
                             normed=False)
                         # Correct for temperature:
@@ -1874,10 +1885,13 @@ def remove_bad_points(info):
 
             # Remove burn-in, defined as all points until the likelhood reaches min_minus_lkl+LOG_LKL_CUTOFF
             # except when it is run in adaptive mode
-            if not info.adaptive:
-                while cheese[start, 1] > info.min_minus_lkl+LOG_LKL_CUTOFF:
-                        start += 1
-            burnin = start-markovian
+            if not info.ignore_burnin:
+                if not info.adaptive:
+                    while cheese[start, 1] > info.min_minus_lkl+LOG_LKL_CUTOFF:
+                            start += 1
+                burnin = start-markovian
+            else:
+                burnin = 0
 
             # Remove fixed fraction as requested by user (usually not useful if non-markovian is also removed)
             if info.keep_fraction < 1:

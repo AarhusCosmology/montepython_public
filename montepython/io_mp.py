@@ -273,17 +273,34 @@ def create_output_files(command_line, data):
                 if int(files.split('__')[-1].split('.')[0]) > suffix:
                     suffix = int(files.split('__')[-1].split('.')[0])
         suffix += 1
-        while trying:
-            data.out = open(os.path.join(
-                command_line.folder, outname_base)+str(suffix)+'.txt', 'w')
-            try:
-                lock(data.out, fcntl.LOCK_EX | fcntl.LOCK_NB)
-                trying = False
-            except LockError:
-                suffix += 1
-        data.out_name = os.path.join(
-            command_line.folder, outname_base)+str(suffix)+'.txt'
-        print('Creating %s\n' % data.out_name)
+
+        # check for MPI
+        use_mpi = False
+        try:
+            from mpi4py import MPI
+            comm = MPI.COMM_WORLD
+            rank = comm.Get_rank()
+            use_mpi = True
+        except:
+            use_mpi = False
+
+        if use_mpi:
+            while trying:
+                data.out = open(os.path.join(
+                    command_line.folder, outname_base)+str(suffix)+'.txt', 'w')
+                try:
+                    lock(data.out, fcntl.LOCK_EX | fcntl.LOCK_NB)
+                    trying = False
+                except LockError:
+                    suffix += 1
+            data.out_name = os.path.join(
+                command_line.folder, outname_base)+str(suffix)+'.txt'
+            print('Creating %s\n' % data.out_name)
+        else:
+            # Only running one chain
+            data.out_name = os.path.join(command_line.folder, outname_base)+suffix+'.txt'
+            data.out = open(data.out_name, 'w')
+            print('Creating %s\n' % data.out_name)
     else:
         data.out_name = os.path.join(
             command_line.folder, outname_base)+command_line.chain_number+'.txt'

@@ -461,6 +461,8 @@ def chain(cosmo, data, command_line):
 
     # Pick a position (from last accepted point if restart, from the mean value
     # else), with a 100 tries.
+    jumping_factor_backup = data.jumping_factor
+    data.jumping_factor = 0
     for i in range(100):
         if get_new_position(data, sigma_eig, U, i,
                             Cholesky, Rotation) is True:
@@ -469,7 +471,8 @@ def chain(cosmo, data, command_line):
             raise io_mp.ConfigurationError(
                 "You should probably check your prior boundaries... because " +
                 "no valid starting position was found after 100 tries")
-
+    data.jumping_factor = jumping_factor_backup
+    
     # Compute the starting Likelihood
     loglike = sampler.compute_lkl(cosmo, data)
 
@@ -801,7 +804,7 @@ def chain(cosmo, data, command_line):
             if (newloglike >= loglike):
                 alpha = 1.
             else:
-                alpha = np.exp(newloglike-loglike)
+                alpha = np.exp(command_line.lklfactor*(newloglike-loglike))
         else:
             alpha = -1
 

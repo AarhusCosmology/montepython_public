@@ -543,6 +543,9 @@ def create_parser():
             symmetric likelihood assumption. In this case we need to
             switch to a one-sided derivative computation (instead of
             two-sided with mirroring), which has not been implemented.<++>
+        <**>--lklfactor<**> : 1.
+           <++>multiply likelihood difference by a factor<++> before evaluating new steps.
+           This is useful for minimizations using MCMC<++>
         <**>--silent<**> : None
             <++>silence the standard output<++> (useful when running on
             clusters)<++>
@@ -698,6 +701,11 @@ def create_parser():
         <**>--center-fisher<**> : None
             <++>Centers Fisher ellipse on bestfit of last set of chains,<++>,
             instead of the center values of the log.param<++>
+        <**>--ignore-burnin<**> : bool.
+           <++>Avoid removing<++> burn-in.<++>
+        <**>--volume<**> : bool.
+           <++>Construct posteriors based on parameter space volume<++>, 
+           i.e. not likelihood-weighted.<++>
 
     Returns
     -------
@@ -838,6 +846,11 @@ def create_parser():
     runparser.add_argument(
         '--IS-starting-folder', dest='IS_starting_folder',
         help=helpdict['IS-starting-folder'], type=str, default='', nargs='+')
+
+    ###############
+    # Factor giving sensitivity to likelihood differences (equivalent to a temperature)
+    runparser.add_argument('--lklfactor', help=helpdict['lklfactor'],
+                          type=float, default = 1.)
 
     ###############
     # We need the following so the run does not crash if one of the external
@@ -984,6 +997,12 @@ def create_parser():
     # -- calculate the covariant matrix when analyzing the chains
     infoparser.add_argument('--want-covmat', help=helpdict['want-covmat'],
                             dest='want_covmat', action='store_true')
+    # -- avoid removing burn-in 
+    infoparser.add_argument('--ignore-burnin', help=helpdict['ignore-burnin'],
+                            dest='ignore_burnin', action='store_true')
+    # -- construct volume-based posteriors 
+    infoparser.add_argument('--volume', help=helpdict['volume'],
+                            dest='volume', action='store_true')
     # -------------------------------------
     # Further customization
     # -- fontsize of plots (defaulting to 16)
