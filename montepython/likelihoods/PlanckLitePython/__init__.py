@@ -5,36 +5,18 @@ from montepython.likelihood_class import Likelihood
 import os
 
 class PlanckLitePython(Likelihood):
-    
+
     def __init__(self, path, data, command_line):
-    
         super(PlanckLitePython, self).__init__(path, data, command_line)
-        self.need_cosmo_arguments(
-            data, {'lensing': 'yes', 'output': 'tCl lCl pCl'})
-        #print(path)
+        self.need_cosmo_arguments(data,
+            {'lensing': 'yes', 'output': 'tCl lCl pCl', 'l_max_scalars':2508})
         dirname = os.path.dirname(os.path.abspath(path))
-        #print(dirname)
-        self.TT2018 = PlanckLitePy(data_directory=dirname + '/data', year=2018, spectra='TTTEEE', use_low_ell_bins=False)
-
-
+        self.TT2018 = PlanckLitePy(data_directory=dirname + '/data',
+            year=2018, spectra='TTTEEE', use_low_ell_bins=False)
 
     def loglkl(self, cosmo, data):
-        
-        nuisance_parameter_names = data.get_mcmc_parameters(['nuisance'])
-    
-        # get Cl's from the cosmological code
-        cl = self.get_cl(cosmo)
-        ell = cl['ell'][2:]
-        factor = ell*ell/(2*np.pi)
-        
-        Dltt = cl['tt'][2:]*factor
-        Dlte = cl['te'][2:]*factor
-        Dlee = cl['ee'][2:]*factor
-
-        print(ell[0])
-        print(Dltt.shape)
-        
-        return self.TT2018.loglike(Dltt, Dlte, Dlee, 2)
+        cl = self.get_cl(cosmo, 2508)
+        return self.TT2018.loglike(cl['tt'], cl['te'], cl['ee'], cl['ell'][0])
 
 
 '''
@@ -63,7 +45,6 @@ class PlanckLitePy:
         use_low_ell_bins = True to use 2 low ell bins for the TT 2<=ell<30 data
           or False to only use ell>=30
         '''
-        print(data_directory)
         self.year=year
         self.spectra=spectra
         self.use_low_ell_bins=use_low_ell_bins #False matches Plik_lite - just l>=30
@@ -192,22 +173,15 @@ class PlanckLitePy:
 
         return fisher
 
-    def loglike(self, Dltt, Dlte, Dlee, ellmin=2):
-        #convert model Dl's to Cls then bin them
-        ls=np.arange(len(Dltt))+ellmin
-        fac=ls*(ls+1)/(2*np.pi)
-        Cltt=Dltt/fac
-        Clte=Dlte/fac
-        Clee=Dlee/fac
-
+    def loglike(self, Cltt, Clte, Clee, ellmin=2):
+        #bin Cls
+        ls=np.arange(len(Cltt))+ellmin
 
         # Fortran to python slicing: a:b becomes a-1:b
         # need to subtract 1 to use 0 indexing for cl,
         # then add one for weights because fortran includes top value
         Cltt_bin=np.zeros(self.nbintt)
         for i in range(self.nbintt):
-            print(len(Cltt[self.blmin_TT[i]+self.plmin_TT-ellmin:self.blmax_TT[i]+self.plmin_TT+1-ellmin]))
-            print(len(self.bin_w_TT[self.blmin_TT[i]:self.blmax_TT[i]+1]))
             Cltt_bin[i]=np.sum(Cltt[self.blmin_TT[i]+self.plmin_TT-ellmin:self.blmax_TT[i]+self.plmin_TT+1-ellmin]*self.bin_w_TT[self.blmin_TT[i]:self.blmax_TT[i]+1])
 
         # bin widths and weights are the same for TT, TE and EE
