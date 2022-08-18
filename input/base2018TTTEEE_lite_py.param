@@ -18,7 +18,7 @@ data.experiments=['PlanckLitePython']
 # the three Planck likelihoods used, only Planck_highl requires nuisance
 # parameters, therefore over_sampling has a length of two (cosmology, plus one
 # set of nuisance).
-data.over_sampling=[1]
+data.over_sampling=[1,10]
 
 #------ Parameter list -------
 
@@ -42,7 +42,7 @@ data.parameters['tau_reio']     = [  0.0543,  0.004, None,      0.008,    1, 'co
 
 # Nuisance parameter list, same call, except the name does not have to be a class name
 
-#data.parameters['A_planck']          = [ 1.00061,   0.9,   1.1,     0.0025,     1, 'nuisance']
+data.parameters['A_planck']          = [ 1.00061,   0.9,   1.1,     0.0025,     1, 'nuisance']
 
 # Derived parameters
 

@@ -10,12 +10,16 @@ class PlanckLitePython(Likelihood):
         super(PlanckLitePython, self).__init__(path, data, command_line)
         self.need_cosmo_arguments(data,
             {'lensing': 'yes', 'output': 'tCl lCl pCl', 'l_max_scalars':2508})
+        self.nuisance = ['A_planck']
         dirname = os.path.dirname(os.path.abspath(path))
         self.TT2018 = PlanckLitePy(data_directory=dirname + '/data',
             year=2018, spectra='TTTEEE', use_low_ell_bins=False)
 
     def loglkl(self, cosmo, data):
         cl = self.get_cl(cosmo, 2508)
+        A_planck = data.mcmc_parameters['A_planck']['current']*data.mcmc_parameters['A_planck']['scale']
+        for key in ['tt', 'te', 'ee']:
+            cl[key] /= A_planck**2
         return self.TT2018.loglike(cl['tt'], cl['te'], cl['ee'], cl['ell'][0])
 
 
