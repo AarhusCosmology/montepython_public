@@ -20,7 +20,9 @@ class PlanckLitePython(Likelihood):
         A_planck = data.mcmc_parameters['A_planck']['current']*data.mcmc_parameters['A_planck']['scale']
         for key in ['tt', 'te', 'ee']:
             cl[key] /= A_planck**2
-        return self.TT2018.loglike(cl['tt'], cl['te'], cl['ee'], cl['ell'][0])
+        lkl = self.TT2018.loglike(cl['tt'], cl['te'], cl['ee'], cl['ell'][0])
+        lkl += -0.5*((A_planck-1)/0.0025)**2
+        return lkl
 
 
 '''
