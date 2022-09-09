@@ -1,0 +1,9 @@
+# This likelihood corresponds to the Planck 2018 high_l TT data (only high l temperature),
+# marginalised over all nuisance parameters except A_planck
+
+# Grab the clik version of the Planck high_l_TT_lite likelihood:
+Planck_highl_TT_lite.path_clik = os.path.join(data.path['clik'], '../../../baseline/plc_3.0/hi_l/plik_lite/plik_lite_v22_TT.clik')
+
+# List of nuisance parameters needed for high_l_TT_lite
+Planck_highl_TT_lite.A_planck_prior_center            = 1
+Planck_highl_TT_lite.A_planck_prior_variance          = 0.0025

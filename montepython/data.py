@@ -180,6 +180,9 @@ class Data(object):
         :rtype: dict
         """
 
+        # Arguments for evaluating likelihood values
+        self.evaluate_data = []
+
         # Initialise the experiments attribute
         self.experiments = []
 

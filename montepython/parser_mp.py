@@ -383,7 +383,8 @@ def create_parser():
             can be set to 'NS' for MultiNest (using Multinest wrapper
             PyMultiNest), 'PC' for PolyChord (using PolyChord wrapper
             PyPolyChord), 'CH' for Cosmo Hammer (using the Cosmo Hammer wrapper
-            to emcee algorithm), and finally 'IS' for importance sampling.
+            to emcee algorithm), 'EV' for evaluating the likelihoods with
+            given inputs and finally 'IS' for importance sampling.
 
             Note that when running with Importance sampling, you need to
             specify a folder to start from.<++>
@@ -755,7 +756,7 @@ def create_parser():
     # -- sampling method (OPTIONAL)
     runparser.add_argument('-m', '--method', help=helpdict['m'],
                            dest='method', default='MH',
-                           choices=['MH', 'NS', 'PC', 'CH', 'IS', 'Der', 'Fisher'])
+                           choices=['MH', 'NS', 'PC', 'CH', 'EV', 'IS', 'Der', 'Fisher'])
     # -- update Metropolis Hastings (OPTIONAL)
     runparser.add_argument('--update', help=helpdict['update'], type=int,
                            dest='update', default=50)

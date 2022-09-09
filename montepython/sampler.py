@@ -54,6 +54,9 @@ def run(cosmo, data, command_line):
     elif command_line.method == 'CH':
         import cosmo_hammer as hammer
         hammer.run(cosmo, data, command_line)
+    elif command_line.method == 'EV':
+        import evaluate_likelihood as ev
+        ev.run(data, command_line)
     elif command_line.method == 'IS':
         import importance_sampling as ims
         ims.run(cosmo, data, command_line)
