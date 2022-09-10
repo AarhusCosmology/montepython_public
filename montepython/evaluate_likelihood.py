@@ -6,7 +6,7 @@ import sys
 import io_mp
 from montepython.likelihoods_emulated.cosmo_free_likelihoods.Planck_highl_TT_lite import Planck_highl_TT_lite
 import sampler
-from data import Data
+from data import Data, Parameter
 import numpy as np 
 import types 
 
@@ -23,7 +23,8 @@ import types
     09/09 2022
 """
 
-def run(data, command_line):
+def run(cosmo, data, command_line):
+    # cosmo input is taken for convenience but never actually used!
     input = []
     for data_name in data.evaluate_data:
         input.append(np.genfromtxt(data_name, comments='#', dtype=float))
@@ -33,18 +34,24 @@ def run(data, command_line):
             print(f"Evaluating inputs in: {data_name}")
             loglkl = []
             for data_point in data_vector:
+
                 if name_lkl == 'sh0es':
                     import likelihoods_emulated.cosmo_free_likelihoods.sh0es as sh0es
                     like = sh0es.sh0es(data.path, data, command_line)
+                    loglkl.append(like.loglkl(data_point))
+
                 elif name_lkl == 'Planck_highl_TT_lite':
                     import likelihoods_emulated.cosmo_free_likelihoods.Planck_highl_TT_lite as Planck
+                    nuisance_parameter_names = ['A_planck']
+
+#                    initialize_nuisance_parameters(data, nuisance_parameter_names) # in the future, put this outside the loop
+                    set_nuisance_parameters(data, nuisance_parameter_names, data_point)
+
                     like = Planck.Planck_highl_TT_lite(data.path, data, command_line)
-
-
+                    loglkl.append(like.loglkl(cosmo, data, command_line))
                 elif name_lkl == 'Planck_highl_TTTEEE':
                     print("Planck2018 TTTEEE not yet implemented!")
 
-                loglkl.append(like.loglkl(data_point))
 
             np.savetxt(data_name.split('.')[0]+'.out', loglkl, header='loglkl')
 
@@ -69,3 +76,13 @@ def run(data, command_line):
     print("\nFinished evaluating likelihoods. Enjoy!")
     return 0
 
+def initialize_nuisance_parameters(data, nuisance_parameter_names):
+    for parameter in nuisance_parameter_names:
+        data.mcmc_parameters['nuisance'] = Parameter(1.0, parameter)
+        data.mcmc_parameters[nuisance]['scale'] = 1.0
+
+def set_nuisance_parameters(data, nuisance_parameter_names, data_point):
+    N_nuisance = len(nuisance_parameter_names)
+    for idx, nuisance in enumerate(nuisance_parameter_names):
+        # data.mcmc_parameters[nuisance]['current'] = data_point[-N_nuisance + idx]
+        data.mcmc_parameters[nuisance]['current'] = 1.0
