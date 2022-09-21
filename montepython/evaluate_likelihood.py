@@ -44,45 +44,29 @@ def run(cosmo, data, command_line):
                     import likelihoods_emulated.cosmo_free_likelihoods.Planck_highl_TT_lite as Planck
                     nuisance_parameter_names = ['A_planck']
 
-#                    initialize_nuisance_parameters(data, nuisance_parameter_names) # in the future, put this outside the loop
+                    initialize_nuisance_parameters(data, nuisance_parameter_names) # in the future, put this outside the loop
                     set_nuisance_parameters(data, nuisance_parameter_names, data_point)
+                    # remember to also update the "varying" parameters!
 
-                    like = Planck.Planck_highl_TT_lite(data.path, data, command_line)
+                    folder = os.path.abspath(os.path.join(data.path['MontePython'], "likelihoods", "%s" % name_lkl))
+                    like = Planck.Planck_highl_TT_lite(f"{folder}/{name_lkl}.data", data, command_line)
                     loglkl.append(like.loglkl(cosmo, data, command_line))
+
                 elif name_lkl == 'Planck_highl_TTTEEE':
                     print("Planck2018 TTTEEE not yet implemented!")
 
 
             np.savetxt(data_name.split('.')[0]+'.out', loglkl, header='loglkl')
-
-
-    """
-    h = data_point
-    def overwrite_h(self):
-        return h
-    #cosmo.h() = lambda x: h  # <-- Override the function like this!
-    cosmo.h = types.MethodType(overwrite_h, cosmo)
-    print(cosmo.h())
-    print(likelihood.loglkl(cosmo, data))
-    """
-
-
-    # To find out: How to set cosmo data!
-    # Problem: The likelihood functions don't take direct inputs, instead they query the cosmo module for them.
-    # To get this to work, I should therefore modify the cosmo module. This could maybe be done for things like attributes,
-    # but the problem is that many of the likelihoods query cosmo.compute() etc. directly, which cannot be done unless some
-    # serious hacking is done to the cosmo module. Even then, it would be impossible to do an automatic one-serves-all general
-    # emulation that works on all likelihoods. We probably need to hardcode some of that!
     print("\nFinished evaluating likelihoods. Enjoy!")
     return 0
 
 def initialize_nuisance_parameters(data, nuisance_parameter_names):
     for parameter in nuisance_parameter_names:
-        data.mcmc_parameters['nuisance'] = Parameter(1.0, parameter)
-        data.mcmc_parameters[nuisance]['scale'] = 1.0
+        data.mcmc_parameters[parameter] = Parameter([100.028,   90,  110,  0.25,  0.01,'nuisance'], parameter)
+        data.mcmc_parameters[parameter]['scale'] = 1.0
 
 def set_nuisance_parameters(data, nuisance_parameter_names, data_point):
     N_nuisance = len(nuisance_parameter_names)
-    for idx, nuisance in enumerate(nuisance_parameter_names):
+    for idx, parameter in enumerate(nuisance_parameter_names):
         # data.mcmc_parameters[nuisance]['current'] = data_point[-N_nuisance + idx]
-        data.mcmc_parameters[nuisance]['current'] = 1.0
+        data.mcmc_parameters[parameter]['current'] = 100.0
