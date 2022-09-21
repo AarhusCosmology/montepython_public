@@ -569,6 +569,9 @@ def create_parser():
         <**>--display-each-chi2<**> : bool
             <++>Shows the effective chi2 from each likelihood and the total.<++>
             Useful e.g. if you run at the bestfit point with -f 0 (flag)<++>
+        <**>--clik-write-cls<**> : bool
+            <++>If True, Cl spectra required for the desired clik likelihood will<++>
+            be stored in the output location alongside the chain (flag)<++>
         <**>--parallel-chains<**> : bool
             <++>Option for when running parallel without MPI<++>.
             Informs the code you are running parallel chains. This
@@ -817,6 +820,9 @@ def create_parser():
     # display option
     runparser.add_argument('--display-each-chi2', help=helpdict['display-each-chi2'],
                            dest='display_each_chi2', action='store_true')
+    # option for saving Cl spectra
+    runparser.add_argument('--clik-write-cls', help=helpdict['clik-write-cls'],
+                           dest='clik_write_cls', action='store_true')
     # -- parallel chains without MPI (OPTIONAL)
     runparser.add_argument('--parallel-chains', help=helpdict['parallel-chains'],
                            action='store_true')

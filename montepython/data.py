@@ -180,6 +180,9 @@ class Data(object):
         :rtype: dict
         """
 
+        # Arguments for --clik-write-cls
+        self.clik_write_cls = command_line.clik_write_cls
+
         # Initialise the experiments attribute
         self.experiments = []
 

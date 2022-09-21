@@ -181,7 +181,7 @@ class Likelihood(object):
                 "]$ rm -rf %s \n " % command_line.folder +
                 "Be sure there is noting in it before doing this !")
 
-    def get_cl(self, cosmo, l_max=-1):
+    def get_cl(self, cosmo, reduce_cls=False, l_max=-1):
         """
         Return the :math:`C_{\ell}` from the cosmological code in
         :math:`\mu {\\rm K}^2`
@@ -190,18 +190,22 @@ class Likelihood(object):
         # get C_l^XX from the cosmological code
         cl = cosmo.lensed_cl(int(l_max))
 
-        # convert dimensionless C_l's to C_l in muK**2
-        T = cosmo.T_cmb()
-        for key in dictkeys(cl):
-            # All quantities need to be multiplied by this factor, except the
-            # phi-phi term, that is already dimensionless
-            # phi cross-terms should only be multiplied with this factor once
-            if key not in ['pp', 'ell', 'tp', 'ep']:
-                cl[key] *= (T*1.e6)**2
-            elif key in ['tp', 'ep']:
-                cl[key] *= (T*1.e6)
-
-        return cl
+        if reduce_cls:
+            cl_reduced = self.get_computed_cls(cosmo)
+            return cl, cl_reduced
+        else:
+            # if writing cls, write the non-converted ones
+            # convert dimensionless C_l's to C_l in muK**2
+            T = cosmo.T_cmb()
+            for key in dictkeys(cl):
+                # All quantities need to be multiplied by this factor, except the
+                # phi-phi term, that is already dimensionless
+                # phi cross-terms should only be multiplied with this factor once
+                if key not in ['pp', 'ell', 'tp', 'ep']:
+                    cl[key] *= (T*1.e6)**2
+                elif key in ['tp', 'ep']:
+                    cl[key] *= (T*1.e6)
+            return cl
 
     def get_unlensed_cl(self, cosmo, l_max=-1):
         """
@@ -224,6 +228,45 @@ class Likelihood(object):
                 cl[key] *= (T*1.e6)
 
         return cl
+
+    def get_computed_cls(self, cosmo):
+        # computes the reduced l-grid internally in CLASS
+        # requires CLASS++
+        # "cosmo" argument is a pre-computed cosmological module instance
+
+        # function copied from CONNECT https://github.com/AarhusCosmology/connect
+        # by Andreas Nygaard
+
+        # get parameters from CLASS model
+        BA                 = cosmo.get_background()
+        conformal_age_     = BA['conf. time [Mpc]'][-1]
+        der_pars           = cosmo.get_current_derived_parameters(['ra_rec','tau_rec'])
+        cls                = cosmo.lensed_cl()
+        l_max              = len(cls['ell']) - 1
+        angular_rescaling_ = der_pars['ra_rec']/(conformal_age_ - der_pars['tau_rec'])
+        l_linstep          = 40
+        l_logstep          = 1.12
+
+        # compute necessary ells like CLASS (see transfer module in CLASS)
+        increment = max(int(2*(np.power(l_logstep,angular_rescaling_) - 1)), 1)
+        l=[0,1,2]
+
+        lin_increment = int(l_linstep*angular_rescaling_)
+        while l[-1] + increment < l_max:
+            if increment < lin_increment:
+                l.append(l[-1] + increment)
+                increment = max(int(l[-1]*(np.power(l_logstep,angular_rescaling_) - 1)), 1)
+            else:
+                l.append(l[-1] + lin_increment)
+
+        # create reduced dict of cls
+        ell = np.array(l)
+        new_cls = {'ell':ell}
+        for key, arr in cls.items():
+            if key != 'ell':
+                new_cls[key] = arr[ell]
+
+        return new_cls
 
     def need_cosmo_arguments(self, data, dictionary):
         """
@@ -951,7 +994,10 @@ class Likelihood_clik(Likelihood):
         nuisance_parameter_names = data.get_mcmc_parameters(['nuisance'])
 
         # get Cl's from the cosmological code
-        cl = self.get_cl(cosmo)
+        if data.command_line.clik_write_cls:
+            cl, cl_reduced = self.get_cl(cosmo, reduce_cls=True)
+        else:
+            cl = self.get_cl(cosmo)
 
         # testing for lensing
         if self.lensing:
@@ -1086,6 +1132,17 @@ class Likelihood_clik(Likelihood):
                 lkl += -0.5*((joint_sz-self.joint_sz_prior_center)/self.joint_sz_prior_variance)**2
 
             # End of block for joint sz prior.
+        
+        # Write Cls to file if required
+        for key, cls in cl_reduced.items():
+            filename = f"{data.out_name[:-4]}.cl{key}"
+            if key == 'ell':
+                with open(filename, "w") as file: # overrides each time, so we only get 1 line
+                    file.write(" \t ".join([f"{int(k)}" for k in cls])+"\n")
+            else:
+                with open(filename, "a+") as file:
+                    file.write(" \t ".join([f"{k:.12e}" for k in np.insert(cls, 0, lkl)])+"\n")
+            
 
         return lkl
 
