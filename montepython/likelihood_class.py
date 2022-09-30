@@ -190,21 +190,21 @@ class Likelihood(object):
         # get C_l^XX from the cosmological code
         cl = cosmo.lensed_cl(int(l_max))
 
+        # convert dimensionless C_l's to C_l in muK**2
+        T = cosmo.T_cmb()
+        for key in dictkeys(cl):
+            # All quantities need to be multiplied by this factor, except the
+            # phi-phi term, that is already dimensionless
+            # phi cross-terms should only be multiplied with this factor once
+            if key not in ['pp', 'ell', 'tp', 'ep']:
+                cl[key] *= (T*1.e6)**2
+            elif key in ['tp', 'ep']:
+                cl[key] *= (T*1.e6)
+
         if reduce_cls:
             cl_reduced = self.get_computed_cls(cosmo)
             return cl, cl_reduced
         else:
-            # if writing cls, write the non-converted ones
-            # convert dimensionless C_l's to C_l in muK**2
-            T = cosmo.T_cmb()
-            for key in dictkeys(cl):
-                # All quantities need to be multiplied by this factor, except the
-                # phi-phi term, that is already dimensionless
-                # phi cross-terms should only be multiplied with this factor once
-                if key not in ['pp', 'ell', 'tp', 'ep']:
-                    cl[key] *= (T*1.e6)**2
-                elif key in ['tp', 'ep']:
-                    cl[key] *= (T*1.e6)
             return cl
 
     def get_unlensed_cl(self, cosmo, l_max=-1):
@@ -1132,17 +1132,54 @@ class Likelihood_clik(Likelihood):
                 lkl += -0.5*((joint_sz-self.joint_sz_prior_center)/self.joint_sz_prior_variance)**2
 
             # End of block for joint sz prior.
-        
-        # Write Cls to file if required
-        for key, cls in cl_reduced.items():
-            filename = f"{data.out_name[:-4]}.cl{key}"
-            if key == 'ell':
-                with open(filename, "w") as file: # overrides each time, so we only get 1 line
-                    file.write(" \t ".join([f"{int(k)}" for k in cls])+"\n")
-            else:
-                with open(filename, "a+") as file:
-                    file.write(" \t ".join([f"{k:.12e}" for k in np.insert(cls, 0, lkl)])+"\n")
-            
+       
+        if data.command_line.clik_write_cls:
+            # Write Cls to file if required
+            if self.name in ['Planck_highl_TTTEEE', 'Planck_highl_TTTEEE_lite']:
+                spectrum_types = ['tt','te','ee']
+            elif self.name in ['Planck_highl_TT', 'Planck_highl_TT_lite', 'Planck_lowl_TT']:
+                spectrum_types = ['tt']
+            elif self.name == 'Planck_lensing':
+                spectrum_types = ['tp','pp']
+            elif self.name == 'Planck_lowl_BB':
+                spectrum_types = ['bb']
+            elif self.name == 'Planck_lowl_EE':
+                spectrum_types = ['ee']
+            elif self.name == 'Planck_lowl_EEBB':
+                spectrum_types = ['ee','bb']
+
+            nuisance_values = []
+            for nuisance in self.clik.get_extra_parameter_names():
+                if (self.name == 'Planck15_highl_lite') or (self.name == 'Planck15_highl_TTTEEE_lite'):
+                    if nuisance == 'A_Planck':
+                        nuisance = 'A_planck'
+
+                if nuisance in nuisance_parameter_names:
+                    nuisance_values.append(data.mcmc_parameters[nuisance]['current'] *\
+                        data.mcmc_parameters[nuisance]['scale'])
+
+            for key, cls in cl_reduced.items():
+                filename = f"{data.out_name[:-4]}.cl{key}"
+                if key == 'ell':
+                    with open(filename, "w") as file: # overrides each time, so we only get 1 line
+                        file.write(" \t ".join([f"{int(k)}" for k in cls])+"\n")
+                elif key in spectrum_types:
+                    with open(filename, "a+") as file:
+                        # Write Cls
+                        file.write(" \t ".join([f"{k:.18e}" for k in np.insert(cls, 0, -lkl)])+" \t ")
+                        file.write(" \t ".join([f"{k:.18e}" for k in nuisance_values])+"\n")
+
+                                # fill with nuisance parameters
+        for nuisance in self.clik.get_extra_parameter_names():
+
+            # line added to deal with a bug in planck likelihood release: A_planck called A_Planck in plik_lite
+            if (self.name == 'Planck15_highl_lite') or (self.name == 'Planck15_highl_TTTEEE_lite'):
+                if nuisance == 'A_Planck':
+                    nuisance = 'A_planck'
+
+            if nuisance in nuisance_parameter_names:
+                nuisance_value = data.mcmc_parameters[nuisance]['current'] *\
+                    data.mcmc_parameters[nuisance]['scale']
 
         return lkl
 
