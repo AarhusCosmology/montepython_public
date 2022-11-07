@@ -862,6 +862,9 @@ class Data(object):
                 Omega_L = self.cosmo_arguments['Omega_L']
                 self.cosmo_arguments['omega_cdm'] = (1.-Omega_L)*h*h-omega_b
                 del self.cosmo_arguments[elem]
+            elif elem == 'log10z':
+                self.cosmo_arguments['z_decay_NEDE'] = 10**self.cosmo_arguments[elem]
+                del self.cosmo_arguments[elem]
             elif elem == 'ln10^{10}A_s':
                 self.cosmo_arguments['A_s'] = math.exp(
                     self.cosmo_arguments[elem]) / 1.e10

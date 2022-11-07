@@ -1,0 +1,3 @@
+# ACTPol_lite_DR4_for_combining_with_Planck likelihood: modify the line below for your installation
+
+ACTPol_lite_DR4_for_combining_with_Planck.data_directory    = '/home/ebholm/MontePythonCluster/montepython_public/data/pyactlike/'

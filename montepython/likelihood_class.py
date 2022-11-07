@@ -65,7 +65,6 @@ class Likelihood(object):
             attributes = [e for e in dir(getattr(data,self.name)) if e.find('__') == -1]
             for elem in attributes:
                 setattr(self, elem, getattr(getattr(data,self.name), elem))
-
         # Read values from the data file
         self.read_from_file(path, data, command_line)
 
@@ -244,10 +243,9 @@ class Likelihood(object):
             Desired precision for some cosmological parameters
 
         """
-        array_flag = False
-        num_flag = True
-
         for key, value in dictitems(dictionary):
+            array_flag = False
+            num_flag = True
             try:
                 data.cosmo_arguments[key]
                 try:
@@ -3040,3 +3038,478 @@ class Likelihood_isw(Likelihood):
         chi2_cross=np.asscalar(np.dot(self.cl_binned_cross-A*b*cl_binned_cross_theory,np.dot(np.linalg.inv(self.cov_binned_cross),self.cl_binned_cross-A*b*cl_binned_cross_theory)))
         chi2_auto=np.asscalar(np.dot(self.cl_binned_auto-b**2*cl_binned_auto_theory,np.dot(np.linalg.inv(self.cov_binned_auto),self.cl_binned_auto-b**2*cl_binned_auto_theory)))
         return -0.5*(chi2_cross+chi2_auto)
+
+
+import scipy.constants as conts
+try:
+    from pybird import pybird as pb
+except ImportError:
+    raise Exception('Cannot find pybird library')
+
+class Likelihood_eft(Likelihood):
+
+    def __init__(self, path, data, command_line):
+
+        Likelihood.__init__(self, path, data, command_line)
+        
+        # read values of k (in h/Mpc)
+        k3, PSdata = self.__load_data()
+        self.k = k3.reshape(3,-1)[0]
+        self.ps = PSdata.reshape(3, -1)
+        self.Nk = len(self.k)
+        try:
+            self.kmax0
+            self.kmax2
+        except:
+            self.kmax0 = self.kmax
+            self.kmax2 = self.kmax
+        kmask0 = np.argwhere((self.k <= self.kmax0) & (self.k >= self.kmin))[:,0]
+        kmask2 = np.argwhere((self.k <= self.kmax2) & (self.k >= self.kmin))[:,0] + len(self.k)
+        self.kmask = np.concatenate((kmask0, kmask2))
+        self.xdata = self.k[kmask0]
+        self.ydata = PSdata[self.kmask]
+
+        # BAO
+        try:
+            if self.baoH is not 0 and self.baoD is not 0:
+                self.ydata = np.concatenate((self.ydata, [self.baoH, self.baoD]))
+                self.kmask = np.concatenate(( self.kmask, [-2, -1] ))
+                self.with_bao = True
+            else: self.with_bao = False
+        except:
+            self.with_bao = False
+
+        # read covariance matrices
+        try:
+            self.covmat_file
+            self.use_covmat = True
+        except Exception:
+            print("You should declare a covariance matrix!")
+
+        if self.use_covmat:
+            cov = np.loadtxt(os.path.join(self.data_directory, self.covmat_file))
+            covred = cov[self.kmask.reshape((len(self.kmask), 1)), self.kmask]
+            self.invcov = np.linalg.inv(covred)
+
+        self.chi2data = np.dot(self.ydata, np.dot(self.invcov, self.ydata))
+        self.invcovdata = np.dot(self.ydata, self.invcov)
+
+        self.kin = np.logspace(-5, 0, 200)
+
+        try: 
+            if self.use_prior and self.priors is not None: 
+                self.priors = np.array(self.priors)
+                if self.model == 1: 
+
+                    b3, cct, cr1, ce2, sn = self.priors
+                    print ('EFT priors: b3: %s, cct: %s, cr1(+cr2): %s, ce2: %s, shotnoise: %s' % (b3, cct, cr1, ce2, sn) )
+                elif self.model == 2: 
+                    b3, cct, cr1, ce2 = self.priors
+                    print ('EFT priors: b3: %s, cct: %s, cr1(+cr2): %s, ce2: %s' % (b3, cct, cr1, ce2) )
+            else: 
+                print ('EFT priors: none')
+                self.use_prior = True
+                if self.model == 1: self.priors = np.array([ 10., 10., 16., 10., 2.])
+                elif self.model == 2: self.priors = np.array([ 10., 10., 16., 10. ])
+                elif self.model == 3: self.priors = np.array([ 10., 10., 16., 10., 10. ])
+        except:
+            self.use_prior = True
+            if self.model == 1: 
+                self.priors = np.array([ 2., 2., 8., 2., 2. ])
+                b3, cct, cr1, ce2, sn = self.priors
+                print ('EFT priors: b3: %s, cct: %s, cr1(+cr2): %s, ce2: %s, shotnoise: %s (default)' % (b3, cct, cr1, ce2, sn) )
+            elif self.model == 2: 
+                self.priors = np.array([ 2., 2., 8., 2. ])
+                b3, cct, cr1, ce2 = self.priors
+                print ('EFT priors: b3: %s, cct: %s, cr1(+cr2): %s, ce2: %s (default)' % (b3, cct, cr1, ce2) )
+            elif self.model == 3: 
+                self.priors = np.array([ 10., 4., 8., 4., 2. ])
+                b3, cct, cr1, ce2, ce1 = self.priors
+                print ('EFT priors: b3: %s, cct: %s, cr1(+cr2): %s, ce2: %s, ce1: %s (default)' % (b3, cct, cr1, ce2, ce1) )
+        
+        self.priormat = np.diagflat(1./self.priors**2)
+
+        self.use_BBNprior = False
+        try: 
+            if self.omega_b_BBNsigma is not 0: 
+                self.use_BBNprior = True
+                print ('BBN prior on omega_b: on')
+            else: print ('BBN prior on omega_b: none')
+        except:
+            print ('BBN prior on omega_b: none')
+
+    def __load_data(self):
+        """
+        Helper function to read in the full data vector.
+        """
+        print("Load data?")
+        fname = os.path.join(self.data_directory, self.data_file)
+        kPS, PSdata, _ = np.loadtxt(fname, unpack=True)
+        return kPS, PSdata
+
+class Likelihood_bird(Likelihood_eft):
+
+    def __init__(self, path, data, command_line):
+        
+        Likelihood_eft.__init__(self, path, data, command_line)
+
+        self.need_cosmo_arguments(data, {'output': 'mPk', 'z_max_pk': self.z, 'P_k_max_h/Mpc': 1.})
+
+        print ("-- bird settings --")
+
+        try:
+            if self.birdlkl is 'full': print ('bird lkl: full')
+            elif self.birdlkl is 'marg': print ('bird lkl: marg')
+            elif self.birdlkl is 'fastfull': print ('bird lkl: fast full')
+            elif self.birdlkl is 'fastmarg': print ('bird lkl: fast marg')
+            else: 
+                self.birdlkl = 'fastmarg'
+                print ('bird lkl: fast marg')
+        except:
+            self.birdlkl = 'fastmarg'
+            print ('bird lkl: fast marg (default)')
+
+        try: 
+            if self.optiresum is True: print ('resummation: optimized')
+            else: 
+                self.optiresum = False
+                print ('resummation: full')
+        except: 
+            self.optiresum = False
+            print ('resummation: full (default)')
+
+        try: 
+            if self.zAP != self.z: 
+                print ('Effective redshift: %s, AP redshift: %s'%(self.z, self.zAP))  
+            else: 
+                self.zAP = self.z
+                print ('Effective redshift: %s'%(self.z))
+        except: 
+            self.zAP = self.z
+            print ('Effective redshift: %s'%(self.z))
+
+        try:
+            self.path_to_window = os.path.join(self.data_directory, self.path_to_window)
+            self.window_configspace_file = os.path.join(self.path_to_window, self.window_configspace_file)
+            test = np.loadtxt(self.window_configspace_file)
+            self.use_window = True
+            print("Mask: on")
+        except:
+            print("Mask: none")
+            self.window_fourier_name = None
+            self.path_to_window = None
+            self.window_configspace_file = None
+            self.use_window = False
+
+        try:
+            if self.fibcol_window: print ("fiber collision window: on")
+            else: print ("fiber collision window: none")
+        except:
+            self.fibcol_window = False
+            print("fiber collision window: none")
+
+        try:
+            if self.binning: print ("k-binning: on")
+            else: print ("k-binning: none") 
+        except: 
+            self.binning = False
+            print ("k-binning: none")
+        
+        self.co = pb.Common(optiresum = self.optiresum)
+        self.nonlinear = pb.NonLinear(load=True, save=True, co=self.co)
+        self.resum = pb.Resum(co=self.co)
+        self.projection = pb.Projection(self.k, self.Om_AP, self.zAP, 
+            window_fourier_name=self.window_fourier_name, path_to_window=self.path_to_window, window_configspace_file=self.window_configspace_file,
+            binning=self.binning, fibcol=self.fibcol_window, co=self.co)
+        
+        self.bird = None
+        print("-- bird loaded --")
+
+    def loglkl(self, cosmo, data):
+
+        bval = [data.mcmc_parameters[k]['current'] * data.mcmc_parameters[k]['scale'] for k in self.use_nuisance]
+
+        b1 = bval[0]
+        b2 = (bval[1] + bval[3]) / np.sqrt(2.)
+        b4 = (bval[1] - bval[3]) / np.sqrt(2.)
+        bs = [b1, b2, bval[2], b4, bval[4]/self.knl**2, bval[5]/self.km**2, 0.]
+        if self.birdlkl is 'fastmarg' or self.birdlkl is 'fastfull':
+            if data.need_cosmo_update is True or self.bird is None: 
+                plin = [cosmo.pk(ki*cosmo.h(), self.z)*cosmo.h()**3 for ki in self.kin]
+
+                DA = cosmo.angular_distance(self.z) * cosmo.Hubble(0.)
+                H = cosmo.Hubble(self.z) / cosmo.Hubble(0.)
+                f = cosmo.scale_independent_growth_factor_f(self.z)
+                
+                self.bird = pb.Bird(self.kin, plin, f, DA, H, self.z, which='all', co=self.co)
+                self.nonlinear.PsCf(self.bird)
+                self.bird.setPsCfl()
+                self.resum.Ps(self.bird)
+                self.projection.AP(self.bird)
+                if self.use_window is True: self.projection.Window(self.bird)
+                if self.fibcol_window: self.projection.fibcolWindow(self.bird)
+                if self.binning: self.projection.kbinning(self.bird)
+                else: self.projection.kdata(self.bird)
+
+                #print ('update')
+            else: pass
+                #print ('pass')
+
+            self.bird.setreducePslb(bs)
+
+            if self.birdlkl is 'fastmarg':
+                self.bird.Pb3 = self.bird.Ploopl[:,3] + b1 * self.bird.Ploopl[:,7]
+
+            if self.birdlkl is 'fastfull':
+                self.bird.fullPs[0] += bval[7] / self.nd + bval[8] / self.nd / self.km**2 * self.k**2
+                self.bird.fullPs[1] += bval[9] / self.nd / self.km**2 * self.k**2
+
+        ### DEPRECIATED
+        # elif self.birdlkl is 'marg': 
+        #     plin = [cosmo.pk(ki*cosmo.h(), self.z)*cosmo.h()**3 for ki in self.kin]
+        #     self.bird = pb.Bird(self.kin, plin, cosmo.Omega_m(), self.z, which='marg', co=self.co)
+        #     self.nonlinear.PsCf(self.bird)
+        #     self.bird.setmargPsCfl(bs) # giving here b1, b2 (b4)
+        #     self.resum.Ps(self.bird)
+        #     self.projection.AP(self.bird)
+        #     if self.use_window is True: self.projection.Window(self.bird)
+            
+        # elif self.birdlkl is 'full':
+        #     plin = [cosmo.pk(ki*cosmo.h(), self.z)*cosmo.h()**3 for ki in self.kin]
+        #     self.bird = pb.Bird(self.kin, plin, cosmo.Omega_m(), self.z, which='full', co=self.co)
+        #     self.nonlinear.PsCf(self.bird)
+        #     self.bird.setPsCf(bs)
+        #     self.resum.Ps(self.bird)
+        #     self.bird.fullPs[0] += bval[7] + bval[8] / self.nd / self.km**2 * self.kin**2
+        #     self.bird.fullPs[1] += bval[9] / self.nd / self.km**2 * self.kin**2
+        #     self.projection.AP(self.bird)
+        #     if self.use_window is True: self.projection.Window(self.bird)
+
+        modelX = self.bird.fullPs.reshape(-1)
+        
+        if self.with_bao: # BAO
+            DM_at_z = cosmo.angular_distance(self.zbao) * (1. + self.zbao)
+            H_at_z = cosmo.Hubble(self.zbao) * conts.c / 1000.0
+            rd = cosmo.rs_drag() * self.rs_rescale
+
+            theo_DM_rdfid_by_rd_in_Mpc = DM_at_z / rd * self.rd_fid_in_Mpc
+            theo_H_rd_by_rdfid = H_at_z * rd / self.rd_fid_in_Mpc
+
+            modelX = np.concatenate((modelX, [theo_H_rd_by_rdfid, theo_DM_rdfid_by_rd_in_Mpc]))
+        
+        modelX = modelX[self.kmask]
+
+        if 'marg' in self.birdlkl:
+            Pi = self.__get_Pi_for_marg(self.bird.Pctl, self.bird.Pb3, b1, self.bird.f, model=self.model)
+            Covbi = np.dot(Pi, np.dot(self.invcov, Pi.T)) + self.priormat
+            Cinvbi = np.linalg.inv(Covbi)
+            vectorbi = np.dot(modelX, np.dot(self.invcov, Pi.T)) - np.dot(self.invcovdata, Pi.T)
+            chi2nomar = (np.dot(modelX, np.dot(self.invcov, modelX)) -
+                         2. * np.dot(self.invcovdata, modelX) + self.chi2data)
+            chi2mar = -np.dot(vectorbi, np.dot(Cinvbi, vectorbi)) + np.log(np.linalg.det(Covbi))
+            chi2 = chi2mar + chi2nomar - self.priors.shape[0] * np.log(2. * np.pi)
+
+        elif 'full' in self.birdlkl:
+            chi2 = np.dot(modelX - self.ydata, np.dot(self.invcov, modelX - self.ydata))
+        
+        if self.use_prior:
+            prior = - 0.5 * (  
+                               (bval[1] / 10.)**2                                    # c2
+                             + (bval[3] / 2.)**2                                    # c4
+                             + (bval[2] / self.priors[0])**2                         # b3
+                             + (bval[4] / self.knl**2 / self.priors[1])**2           # cct
+                             + (bval[5] / self.km**2 / self.priors[2])**2            # cr1(+cr2)
+                             + (bval[9] / self.nd / self.km**2 / self.priors[3])**2  # ce,l2
+                             )
+            if self.model == 1: prior += -0.5 * ( (bval[7] / self.nd / self.priors[4])**2 )              # ce0
+            if self.model == 3: prior += -0.5 * ( (bval[8] / self.nd / self.km**2 / self.priors[4])**2 ) # ce,l0
+
+        if self.use_BBNprior: 
+            prior += -0.5 * ((data.cosmo_arguments['omega_b'] - self.omega_b_BBNcenter) / self.omega_b_BBNsigma)**2
+
+        lkl = - 0.5 * chi2 + prior
+
+        return lkl
+
+    def __get_Pi_for_marg(self, Pct, Pb3, b1, f, model=2):
+
+        kl2 = np.array([np.zeros(self.Nk), self.k]) # k^2 quad
+
+        Pi = np.array([ 
+                        Pb3,                                          # *b3
+                        (2*f*Pct[:,0+3]+2*b1*Pct[:,0]) / self.knl**2, # *cct
+                        (2*f*Pct[:,1+3]+2*b1*Pct[:,1]) / self.km**2 , # *cr1
+                        #(2*f*Pct[:,2+3]+2*b1*Pct[:,2]) / self.km**2 , # *cr2
+                        kl2**2 / self.nd / self.km**2                 # *ce,l2
+                    ])
+
+        if model == 1:  
+            Onel0 = np.array([ np.array([np.ones(self.Nk), np.zeros(self.Nk)]) ])# shot-noise mono
+            Pi = np.concatenate((Pi, Onel0 / self.nd ))
+        elif model == 3:
+            kl0 = np.array([ np.array([self.k, np.zeros(self.Nk)]) ])# k^2 mono
+            Pi = np.concatenate((Pi, kl0**2 / self.nd / self.km**2))
+
+        Pi = Pi.reshape( (Pi.shape[0], -1) )
+
+        if self.with_bao: # BAO
+            newPi = np.zeros(shape=(Pi.shape[0], Pi.shape[1]+2))
+            newPi[:Pi.shape[0], :Pi.shape[1]] = Pi
+            Pi = 1.*newPi
+
+        Pi = Pi[:,self.kmask]
+
+        return Pi
+
+class Likelihood_taylor(Likelihood_eft):
+
+    def __init__(self, path, data, command_line):
+        
+        Likelihood_eft.__init__(self, path, data, command_line)
+        
+        self.linder = np.load(os.path.abspath(
+                              os.path.join(self.data_directory, self.gridpath, 'DerPlin%s.npy' % self.gridname)), allow_pickle=True)
+        self.loopder = np.load(os.path.abspath(
+                               os.path.join(self.data_directory, self.gridpath, 'DerPloop%s.npy' % self.gridname)), allow_pickle=True)
+
+        print("End of initialization")
+
+    def loglkl(self, cosmo, data, marg_gaussian=True):
+
+        try:
+            mnu = [float(m) for m in data.cosmo_arguments['m_ncdm'].split(', ')]
+            mtot = np.sum(mnu)
+
+            dtheta = np.array((data.cosmo_arguments['A_s'] - self.central[0],
+                               data.cosmo_arguments['h'] - self.central[1],
+                               data.cosmo_arguments['omega_cdm'] - self.central[2],
+                               data.cosmo_arguments['omega_b'] - self.central[3],
+                               data.cosmo_arguments['n_s'] - self.central[4],
+                               mtot - self.central[5]
+                               ))
+        except:
+            dtheta = np.array((data.cosmo_arguments['A_s'] - self.central[0],
+                   data.cosmo_arguments['h'] - self.central[1],
+                   data.cosmo_arguments['omega_cdm'] - self.central[2],
+                   data.cosmo_arguments['omega_b'] - self.central[3],
+                   data.cosmo_arguments['n_s'] - self.central[4]
+                   ))
+
+
+        Plin = self.__get_PSTaylor(dtheta, self.linder)
+        Ploop = self.__get_PSTaylor(dtheta, self.loopder)
+
+        kfull = Plin[0, :, 0]
+        Plin = np.swapaxes(Plin.reshape(2, len(kfull), Plin.shape[-1]), axis1=1, axis2=2)[:, 1:, :]
+        Ploop = np.swapaxes(Ploop.reshape(2, len(kfull), Ploop.shape[-1]), axis1=1, axis2=2)[:, 1:, :]
+        bval = [data.mcmc_parameters[k]['current'] for k in self.use_nuisance]
+        modelX = self.__computePS(bval, Plin, Ploop, kfull).reshape(-1)
+
+        if marg_gaussian:
+            Pi = self.__get_Pi_for_marg(Ploop, kfull, bval[0], model=self.model)
+            Pi = Pi.reshape((Pi.shape[0], -1))
+            Covbi = self.get_Covbi_for_marg(Pi, self.invcov)
+            Cinvbi = np.linalg.inv(Covbi)
+            vectorbi = np.dot(modelX, np.dot(self.invcov, Pi.T)) - np.dot(self.invcovdata, Pi.T)
+            chi2nomar = (np.dot(modelX, np.dot(self.invcov, modelX)) -
+                         2. * np.dot(self.invcovdata, modelX) + self.chi2data)
+            chi2mar = -np.dot(vectorbi, np.dot(Cinvbi, vectorbi)) + np.log(np.linalg.det(Covbi))
+            chi2 = chi2mar + chi2nomar - 5 * np.log(2. * np.pi)
+        else:
+            chi2 = np.dot(modelX - self.ydata, np.dot(self.invcov, modelX - self.ydata))
+
+        # return ln(L)
+        if self.use_prior:
+            prior = - 0.5 * (
+                             (bval[2] / 2.)**2 + (bval[3] / 2.)**2 +
+                             (bval[4] / 2.)**2 + (bval[5] / 8.)**2 +
+                             (bval[6] / 4.)**2 + (bval[7] / 400.)**2 +
+                             (bval[9] / 2.)**2 
+                             )
+        else:
+            prior = -0.5 * ( (bval[9] / 10.)**2 )
+
+        if self.use_BBNprior: 
+            prior += -0.5 * ((data.cosmo_arguments['omega_b'] - self.omega_b_BBNcenter) / self.omega_b_BBNsigma)**2
+        
+        lkl = - 0.5 * chi2 + prior
+
+        return lkl
+
+    def __computePS(self, cvals, plin, ploop, setkin):
+        plin0, plin2 = plin
+        ploop0, ploop2 = ploop[:, :18, :]
+        b1, c2, b3, c4, b5, b6, b7, b8, b9, b10 = cvals
+
+        b2 = (c2 + c4) / np.sqrt(2.)
+        b4 = (c2 - c4) / np.sqrt(2.)
+
+        # the columns of the Ploop data files.
+        cvals = np.array([1, b1, b2, b3, b4, b1 * b1, b1 * b2, b1 * b3, b1 * b4, b2 * b2, b2 * b4, b4 * b4,
+                          b1 * b5 / self.knl**2, b1 * b6 / self.km**2, b1 * b7 / self.km**2,
+                          b5 / self.knl**2, b6 / self.km**2, b7 / self.km**2])
+
+        kmask = np.where((setkin >= self.kmin) & (setkin <= self.kmax))[0]
+        km = self.knl
+
+        P0 = (np.dot(cvals, ploop0) +
+              plin0[0] + b1 * plin0[1] + b1 * b1 * plin0[2] +
+              b8 / self.nd + b9 / self.nd / km**2 * setkin**2)
+        P2 = (np.dot(cvals, ploop2) +
+              plin2[0] + b1 * plin2[1] + b1 * b1 * plin2[2] +
+              b10 / self.nd / km**2 * setkin**2)
+        # P4 = (np.dot(cvals, ploop4) +
+        #       plin4[0] + b1 * plin4[1] + b1 * b1 * plin4[2]
+        #       + e3 * (b1 * ploop4e1b1 + ploop4e1))
+
+        # if Puncorr is not 0:
+        #    P0 += Puncorr[0]
+        #    P2 += Puncorr[1]
+
+        return np.array([P0[kmask], P2[kmask]])
+
+    def __get_Pi_for_marg(self, Ploop, kfull, b1, model=2, withBisp=False):
+        nk = len(kfull)
+        ploop0, ploop2 = Ploop[:, :18, :]
+        if model == 1:
+            Onel0 = np.array([np.ones(nk), np.zeros(nk)])
+            kl2 = np.array([np.zeros(nk), kfull])
+            Pi = np.array([2. * Ploop[:, 3, :] + b1 * Ploop[:, 7, :],
+                           2. * (Ploop[:, 15, :] + b1 * Ploop[:, 12, :]) / self.knl**2,
+                           4. * (Ploop[:, 16, :] + b1 * Ploop[:, 13, :]) / self.km**2,
+                           4. * (Ploop[:, 17, :] + b1 * Ploop[:, 14, :]) / self.km**2,  # b7
+                           2400. * Onel0,
+                           2. * kl2**2 / self.nd / self.km**2])  # this is k2 quad
+        elif model == 2:
+            kl2 = np.array([np.zeros(nk), kfull])
+            Pi = np.array([2. * (Ploop[:, 3, :] + b1 * Ploop[:, 7, :]), # b3
+                           2. * (Ploop[:, 15, :] + b1 * Ploop[:, 12, :]) / self.knl**2, # b5
+                           4. * (Ploop[:, 16, :] + b1 * Ploop[:, 13, :]) / self.km**2,  # b6
+                           4. * (Ploop[:, 17, :] + b1 * Ploop[:, 14, :]) / self.km**2,  # b7
+                           2. * kl2**2 / self.nd / self.km**2])
+
+        kmask = np.where((kfull >= self.kmin) & (kfull <= self.kmax))[0]
+
+        return Pi[:, :2, kmask]
+
+    def __get_PSTaylor(self, dtheta, derivatives):
+        # Shape of dtheta: number of free parameters
+        # Shape of derivatives: tuple up to third derivative where each element has shape (num free par, multipoles, lenk, columns)
+        t1 = np.einsum('p,pmkb->mkb', dtheta, derivatives[1])
+        t2diag = np.einsum('p,pmkb->mkb', dtheta**2, derivatives[2])
+        t2nondiag = np.sum([dtheta[d[0]] * dtheta[d[1]] * d[2] for d in derivatives[3]], axis=0)
+        t3diag = np.einsum('p,pmkb->mkb', dtheta**3, derivatives[4])
+        t3semidiagx = np.sum([dtheta[d[0]]**2 * dtheta[d[1]] * d[2] for d in derivatives[5]], axis=0)
+        t3semidiagy = np.sum([dtheta[d[0]] * dtheta[d[1]]**2 * d[2] for d in derivatives[6]], axis=0)
+        t3nondiag = np.sum([dtheta[d[0]] * dtheta[d[1]] * dtheta[d[2]] * d[3] for d in derivatives[7]], axis=0)
+        #t4diag = np.einsum('p,pmkb->mkb', dtheta**4, derivatives[7])
+        #t4semidiag1 = np.sum([dtheta[d[0]]**3 * dtheta[d[1]] * d[2] for d in derivatives[8]], axis=0)
+        #t4semidiag2 = np.sum([dtheta[d[0]]**2 * dtheta[d[1]]**2 * d[2] for d in derivatives[9]], axis=0)
+        #t4semidiag3 = np.sum([dtheta[d[0]]**2 * dtheta[d[1]] * dtheta[d[2]] * d[3] for d in derivatives[10]], axis=0)
+        # t4nondiag = np.sum([dtheta[d[0]] * dtheta[d[1]] * dtheta[d[2]] * dtheta[d[3]] * d[4] for d in derivatives[11]], axis=0)
+        # t5diag = np.einsum('p,pmkb->mkb', dtheta**5, derivatives[12])
+        allPS = (derivatives[0] + t1 + 0.5 * t2diag + t2nondiag # + t3nondiag)
+                + t3diag / 6. + t3semidiagx / 2. + t3semidiagy / 2. + t3nondiag)
+                # t4diag / 24.  + t4semidiag1 / 6. + t4semidiag2 / 4. + t4semidiag3 / 2. + t4nondiag)  # + t5diag / 120.)
+        return allPS
+

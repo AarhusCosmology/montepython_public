@@ -1,0 +1,4 @@
+# Values for Calibration of intrinsic SNIa magnitude Mb
+# Updated to Riess et al. 2021 (arXiv:2012.08534)
+mb.m      = -19.2435
+mb.sigma  = 0.0373

@@ -1,4 +1,5 @@
 # Values from the SH0ES collaboration
 # Updated to Riess et al. 2019 (arXiv:1903.07603)
-sh0es.h      = 0.7403
-sh0es.sigma  = 0.0142
+# Again updated to Riess et al. 2022 (arXiv:2112.04510)
+sh0es.h      = 0.7304
+sh0es.sigma  = 0.0104
