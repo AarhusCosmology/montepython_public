@@ -4,7 +4,7 @@ import warnings
 import math
 import sys
 import io_mp
-from montepython.likelihoods_emulated.cosmo_free_likelihoods.Planck_highl_TT_lite import Planck_highl_TT_lite
+#from montepython.likelihoods_emulated.cosmo_free_likelihoods.Planck_highl_TT_lite import Planck_highl_TT_lite
 import sampler
 from data import Data, Parameter
 import numpy as np 
@@ -26,47 +26,27 @@ import types
 def run(cosmo, data, command_line):
     # cosmo input is taken for convenience but never actually used!
     input = []
-    for data_name in data.evaluate_data:
-        input.append(np.genfromtxt(data_name, comments='#', dtype=float))
+    for name_lkl, likelihood in data.lkl.items():
+        print(f"\nEvaluating {name_lkl}")
+        loglkl = []
+        for data_name in data.evaluate_data:
+            # no suffixes! e.g. sample1 takes data from sample1.clell and sample1.cltt
+            ell = np.genfromtxt(f"{data_name}.clell", comments='#', dtype=int)
+            likelihood.evaluate_ells = ell
+            cltt = np.genfromtxt(f"{data_name}.cltt", comments='#', dtype=float)[:, 1:]
+            for single_spectrum in cltt:
+                likelihood.evaluate_current_cls = single_spectrum
+                print(np.mean(single_spectrum))
 
-    for name_lkl in data.lkl.keys():
-        for data_name, data_vector in zip(data.evaluate_data, input):
-            print(f"Evaluating inputs in: {data_name}")
-            loglkl = []
-            for data_point in data_vector:
+                # do MCMC in nuisance parameters
 
-                if name_lkl == 'sh0es':
-                    import likelihoods_emulated.cosmo_free_likelihoods.sh0es as sh0es
-                    like = sh0es.sh0es(data.path, data, command_line)
-                    loglkl.append(like.loglkl(data_point))
+                #data.mcmc_parameters['A_planck']['current'] = data.mcmc_parameters['A_planck']['initial']
+                data.mcmc_parameters['A_planck']['current'] = 1.0
 
-                elif name_lkl == 'Planck_highl_TT_lite':
-                    import likelihoods_emulated.cosmo_free_likelihoods.Planck_highl_TT_lite as Planck
-                    nuisance_parameter_names = ['A_planck']
+                loglkl.append(likelihood.loglkl(cosmo, data))
+                print(f"Computed loglkl = {loglkl[-1]}")
+            
+            np.savetxt(data_name+'.loglkl', loglkl, header='loglkl')
 
-                    initialize_nuisance_parameters(data, nuisance_parameter_names) # in the future, put this outside the loop
-                    set_nuisance_parameters(data, nuisance_parameter_names, data_point)
-                    # remember to also update the "varying" parameters!
-
-                    folder = os.path.abspath(os.path.join(data.path['MontePython'], "likelihoods", "%s" % name_lkl))
-                    like = Planck.Planck_highl_TT_lite(f"{folder}/{name_lkl}.data", data, command_line)
-                    loglkl.append(like.loglkl(cosmo, data, command_line))
-
-                elif name_lkl == 'Planck_highl_TTTEEE':
-                    print("Planck2018 TTTEEE not yet implemented!")
-
-
-            np.savetxt(data_name.split('.')[0]+'.out', loglkl, header='loglkl')
     print("\nFinished evaluating likelihoods. Enjoy!")
     return 0
-
-def initialize_nuisance_parameters(data, nuisance_parameter_names):
-    for parameter in nuisance_parameter_names:
-        data.mcmc_parameters[parameter] = Parameter([100.028,   90,  110,  0.25,  0.01,'nuisance'], parameter)
-        data.mcmc_parameters[parameter]['scale'] = 1.0
-
-def set_nuisance_parameters(data, nuisance_parameter_names, data_point):
-    N_nuisance = len(nuisance_parameter_names)
-    for idx, parameter in enumerate(nuisance_parameter_names):
-        # data.mcmc_parameters[nuisance]['current'] = data_point[-N_nuisance + idx]
-        data.mcmc_parameters[parameter]['current'] = 100.0
