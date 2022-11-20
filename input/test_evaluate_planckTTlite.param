@@ -1,0 +1,13 @@
+<x#------Experiments to test (separated with commas)-----
+
+#data.experiments=['Planck_highl_TT_lite']
+data.experiments=['Planck_highl_TT_lite_evaluate']
+data.evaluate_data=['evaluate/Planck_highl_TT_lite/sample1']
+
+#data.evaluate_nuisance_strategy = 'test'
+
+data.evaluate_nuisance_strategy = 'lhc'
+data.evaluate_nuisance_samples = 10
+
+# Must have all nuisance parameters defined by default here, as in a usual MCMC chain
+data.parameters['A_planck']          = [ 1.00061,   0.9,   1.1,     0.0025,     1, 'nuisance']
