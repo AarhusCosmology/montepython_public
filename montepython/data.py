@@ -182,6 +182,8 @@ class Data(object):
 
         # Arguments for evaluating likelihood values
         self.evaluate_data = []
+        self.evaluate_nuisance_strategy = ''
+        self.evaluate_nuisance_samples = 1
 
         # Initialise the experiments attribute
         self.experiments = []

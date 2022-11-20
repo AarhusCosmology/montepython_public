@@ -10,8 +10,9 @@ class Planck_highl_TT_lite_evaluate(Likelihood_clik):
 
 
     def get_cl(self, cosmo, l_max=-1):
-        print("\nRUNNING get_cl()!")
+#        print("\nRUNNING get_cl()!")
         full_grid = range(self.clik.get_lmax()[0] + 1)
+        #print(self.evaluate_current_cls)
         interped_cls = interp1d(self.evaluate_ells, self.evaluate_current_cls, fill_value="extrapolate", kind="cubic")(full_grid)
         return {'tt': interped_cls}
 
