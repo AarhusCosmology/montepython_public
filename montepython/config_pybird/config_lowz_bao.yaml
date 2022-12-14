@@ -1,0 +1,177 @@
+# CONFIGURATION FILE EXPLANATORY (13/09/2022)
+# (for more options see pybird.py)
+
+
+#############################
+#                           #
+#   GENERAL SETTINGS        #
+#                           #
+#############################
+
+
+output: bPk
+multipole: 2
+skycut: 2
+wedge: 0
+
+
+#############################
+#                           #
+#   DATA SETTINGS           #
+#                           #
+#############################
+
+
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~#
+#   1) Redshift & scalecuts #
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~#
+
+
+z: [0.32, 0.32]
+
+xmin: [0.01, 0.01]
+xmax: [0.20, 0.20]
+
+
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~#
+#   2) Data files           #
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~#
+
+
+covmat_file: [pybird/Covariance/cov_pk_bao_LOWZ_NGC.dat, pybird/Covariance/cov_pk_LOWZ_SGC.dat]
+#covmat_file: [pybird/Covariance/cov_pk_LOWZ_NGC_3mult.dat, pybird/Covariance/cov_pk_LOWZ_SGC_3mult.dat] #covmat with the hexadecapole
+spectrum_file: [pybird/DataSims/pk_NGC_LOWZ_data.dat, pybird/DataSims/pk_SGC_LOWZ_data.dat]
+
+with_window: True
+windowPk: [pybird/Window/pynest_BOSS_LOW_NGC_z032_pierre_new, pybird/Window/pynest_BOSS_LOW_SGC_z032_pierre_new]
+windowCf: [pybird/Window/window_boss_lowz_ngc_ell02_2021_ell4_2022.dat, pybird/Window/window_boss_lowz_sgc_ell02_2021_ell4_2022.dat]
+
+
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~#
+#   3) AP effect            #
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~#
+
+
+with_AP: True
+z_AP: [0.32, 0.32]
+Omega_m_AP: 0.310
+
+
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~#
+#   4) Various options      #
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~#
+
+
+with_binning: True
+with_fibercol: True
+
+
+#############################
+#                           #
+#      BAO SETTINGS         #
+#                           #
+#############################
+
+
+with_bao: True
+zbao: [0.32, 0.32]
+baoH: [68.8476, 0]
+baoD: [1258.60, 0]
+rs_rescale: [1., 1.]
+rd_fid_in_Mpc: [148.11, 148.11]
+
+with_rs_marg: False
+
+
+#############################
+#                           #
+#    IR-resum SETTINGS      #
+#                           #
+#############################
+
+
+with_resum: True
+optiresum: False
+
+
+#############################
+#                           #
+#      BBN SETTINGS         #
+#                           #
+#############################
+
+
+##Important note: If you use the CMASS configuration file, you do not need to specify 'with_bbn : True' in both files! One file is sufficient.
+
+with_bbn: False
+omega_b_BBNcenter: 0.02268
+omega_b_BBNsigma: 0.00038
+
+
+#############################
+#                           #
+#      EFT SETTINGS         #
+#                           #
+#############################
+
+
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~#
+#   1) analytical marg      #
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~#
+
+
+get_chi2_from_marg: False
+with_derived_bias: False
+
+
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~#
+#   2) EFT parameters       #
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~#
+
+
+eft_basis: westcoast
+km: 0.7
+kr: 0.7
+nd: 4.e-4
+with_stoch: True
+with_nnlo_counterterm: False
+
+eft_prior:
+     b1:
+          type: flat
+          range: null
+     c2:
+          type: flat
+          range: null
+     c4:
+          type: unvaried
+     b3:
+          type: marg_gauss
+          mean: [0., 0.]
+          range: [2., 2.]
+     cct:
+          type: marg_gauss
+          mean: [0., 0.]
+          range: [2., 2.]
+     cr1:
+          type: marg_gauss
+          mean: [0., 0.]
+          range: [8., 8.]
+     cr2:
+          type: unvaried
+#          type: marg_gauss #Uncomment for the hexadecapole !
+#          mean: [0., 0.]
+#          range: [8., 8.]
+     ce0:
+          type: marg_gauss
+          mean: [0., 0.]
+          range: [2., 2.]
+     ce1:
+          type: unvaried
+#          type: marg_gauss
+#          mean: [0., 0.]
+#          range: [2., 2.]
+     ce2:
+          type: marg_gauss
+          mean: [0., 0.]
+          range: [2., 2.]

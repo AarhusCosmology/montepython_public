@@ -1,0 +1,251 @@
+# CONFIGURATION FILE EXPLANATORY (13/09/2022)
+# (for more options see pybird.py & likelihood_class.py)
+
+
+#############################
+#                           #
+#   GENERAL SETTINGS        #
+#                           #
+#############################
+
+
+#output: bPk, bCf, mPk, mCf, bmPk, bmCf.
+         #Choice of Tracer: b = biased tracers, m = matter, bm = biased tracers-matter
+         #Choice of statistics: Pk = power spectrum, Cf = correlation function. (default="bPk")
+#multipole: 0, 2, 3. Number of multipoles: 0 = real space, 2 = monopole + quadrupole, 3 = monopole + quadrupole + hexadecapole.
+            #If, 'multipole:3', do not forget to vary cr2 (see EFT parameters section)! (default=2)
+#skycut: Number of skycuts: 1 = read the first skycut entered in the following arrays, 2 = read both skycuts.
+         #In principle, can be any integer > 1. (default=1)
+
+output: bPk
+multipole: 2
+skycut: 2
+wedge: 0
+
+
+#############################
+#                           #
+#   DATA SETTINGS           #
+#                           #
+#############################
+
+
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~#
+#   1) Redshift & scalecuts #
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~#
+
+
+#z: [z_eff_1, z_eff_2]. z_eff is the effective redshift of the skycut.
+
+#xmin: [xmin_1, x_min_2]. Minimal data point for each skycut (works for Pk and Cf).
+#xmax: [xmax_1, x_max_2]. Maximal data point for each skycut (works for Pk and Cf).
+
+z: [0.57, 0.57]
+
+xmin: [0.01, 0.01]
+xmax: [0.23, 0.23]
+
+
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~#
+#   2) Data files           #
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~#
+
+
+#covmat_file: Path to the covariance matrix. A list can be provided for multi skycuts.
+#spectrum_file: Path to the data file. A list can be provided for multi skycuts.
+
+#with_window: True or False. Allow to specify whether the data is with or without window functions. (default=False)
+#windowPk: Path to Fourier convolution window file.
+           #If not provided, read 'windowCf', precompute the Fourier one and save it here.
+           #Read only if 'with_window: True'. (default=None)
+#windowCf: Path to configuration space window file.
+           #Read only if 'with_window: True'. (default=None)
+
+
+covmat_file: [../data/pybird/Covariance/cov_pk_bao_CMASS_NGC.dat, pybird/Covariance/cov_pk_bao_CMASS_SGC.dat]
+#covmat_file: [../data/pybird/Covariance/cov_pk_CMASS_NGC_3mult.dat, pybird/Covariance/cov_pk_CMASS_SGC_3mult.dat] #covmat with the hexadecapole
+spectrum_file: [../data/pybird/DataSims/pk_NGC_CMASS_data.dat, pybird/DataSims/pk_SGC_CMASS_data.dat]
+
+with_window: True
+windowPk: [../data/pybird/Window/pynest_BOSS_CMASS_NGC_z057_pierre_new, pybird/Window/pynest_BOSS_CMASS_SGC_z057_pierre_new]
+windowCf: [../data/pybird/Window/window_boss_cmass_ngc_ell02_2021_ell4_2022.dat, pybird/Window/window_boss_cmass_sgc_ell02_2021_ell4_2022.dat]
+
+
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~#
+#   3) AP effect            #
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~#
+
+
+#with_AP: True or  False. Apply Alcock Paczynski effect. (default=False)
+#z_AP: Fiducial redshift used to convert coordinates to distances.
+       #A list can be provided for multi skycuts. If only one value is passed, use it for all skycuts.
+       #In general, z_AP = z_eff.
+#Omega_m_AP: Fiducial matter abundance used to convert coordinates to distances.
+             #A list can be provided for multi skycuts. If only one value is passed, use it for all skycuts.
+
+with_AP: True
+z_AP: [0.57, 0.57]
+Omega_m_AP: 0.310
+
+
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~#
+#   4) Various options      #
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~#
+
+
+#with_binning: True or False. Apply binning for linear-spaced data bins. (default=False)
+#with_fibercol: True or False. Apply fiber collision effective window corrections.
+                #The default fiber-collision correction is specified for BOSS survey. (default=False)
+
+with_binning: True
+with_fibercol: True
+
+
+#############################
+#                           #
+#      BAO SETTINGS         #
+#                           #
+#############################
+
+
+#with_bao: True or False. Allows to specify whether the data is combined with the post-reconstructed measurements.
+           #The covariance should be provided with two last rows ans column corresponding to the cross-covariance with the k-bins of the pre-reconstructed full-shape measurements and covariance of the two post-reconstructed BAO parameters.
+#zbao: Redshift for which the post-reconstructed power spectra are determined. In general, zbao = z_eff. A list can be provided for multi skycuts.
+#baoH: Fiducial Hubble parameter in the Alcock-Paczynski (AP) parameter definitions. A list can be provided for multi skycuts.
+#baoD: Fiducial angular diameter distance in the Alcock-Paczynski (AP) parameter definitions. A list can be provided for multi skycuts.
+#rs_rescale: ??? A list can be provided for multi skycuts.
+#rd_fid_in_Mpc: Fiducial sound horizon at the drag epoch of the post-reconstructed power spectra. A list can be provided for multi skycuts.
+
+#with_rs_marg: True of False. rs-marginalization procedure from arXiv:2208.12992.
+
+
+with_bao: True # Here we use arXiv:1509.06373
+zbao: [0.57, 0.57]
+baoH: [97.982, 91.8465]
+baoD: [2160.59, 2215.45]
+rs_rescale: [1., 1.]
+rd_fid_in_Mpc: [148.11, 148.11]
+
+with_rs_marg: False
+
+
+#############################
+#                           #
+#    IR-resum SETTINGS      #
+#                           #
+#############################
+
+
+#with_resum: True or False. Apply IR-resummation. (default=True)
+#optiresum: True or False. True: Resumming only with the BAO peak. False: Resummation on the full correlation function. (default=False)
+
+with_resum: True # PZ: I am not sure that this is read by the likelihood yet, so putting it to False won't work for now
+optiresum: False # PZ: this should not be used except for debugging (will be depreciated)
+
+
+#############################
+#                           #
+#      BBN SETTINGS         #
+#                           #
+#############################
+
+
+#with_bbn: True or False. Add a Gaussian prior on the value of omega_b. (default=False)
+#omega_b_BBNcenter: Mean value of the omega_b Gaussian prior. (omega_b_BBNcenter=0.02268 to mimic the MontePython BBN prior)
+#omega_b_BBNsigma: Standard deviation of the omega_b Gaussian prior. (omega_b_BBNsigma: 0.00038 to mimic the MontePython BBN prior)
+
+with_bbn: False
+omega_b_BBNcenter: 0.02268
+omega_b_BBNsigma: 0.00038
+
+
+#############################
+#                           #
+#      EFT SETTINGS         #
+#                           #
+#############################
+
+
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~#
+#   1) analytical marg      #
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~#
+
+
+#get_chi2_from_marg: True or False. Allows to obtain the global best-fit and the real chi2.
+                     #The marginalized parameters, given the non-marginalized ones, is fed to the global likelihood.
+#with_derived_bias: True or False. Output the best-fit values of the marginalized parameters given values for the non-marginalized parameters.
+                    #The output is stored in the list of 'derived_lkl' parameters specfied in MontePython .param, that should correspond to the 'gauss_marg' parameters specified below.
+
+
+get_chi2_from_marg: False
+with_derived_bias: False
+
+
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~#
+#   2) EFT parameters       #
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~#
+
+
+### Important remark 1: cr2 should vary (i.e., uncomment the lines associated with this parameter) when introducing the hexadecapole
+
+#eft_basis: 'westcoast' or 'eastcoast'. Allows to specify the basis of data (see arXiv:2208.05929). (default=westcoast)
+#km: Inverse tracer spatial extension scale in [h/Mpc]. (default=0.7)
+#kr: Inverse velocity product renormalization scale in [h/Mpc]. (default=0.25)
+#nd: Mean galaxy density. (default=3e-4)
+#with_stoch: True or False. Add the stochastic terms. (default=False)
+#with_nnlo_counterterm: True or False. Add the next-to-next-to-leading counterterm in k^4 P11. Do not forget to vary ce1! (default=False)
+
+#eft_prior: List of the EFT parameters varying in the analysis (see arXiv:2003.07956 for a definition of these parameters for the westcoart prior).
+#           -->type: unvaried, flat, marg_gauss, gauss. Allows to specify the type of EFT prior.
+                     #'marg_gauss' is for an analytical marginalized parameter.
+                     #Set 'gauss' to get the posteriors of marg_gauss parameters (as it will be not marginalized and sampled).
+#           -->mean: Mean value of the EFT parameter Gaussian prior. A list can be provided for multi skycuts.
+#           -->range: Standard deviation of the the EFT parameter Gaussian prior. A list can be provided for multi skycuts.
+
+
+eft_basis: westcoast # b1, c2, c4, b3 (biased parameters) & cct, cr1, cr2 (counterterms)
+km: 0.7
+kr: 0.7
+nd: 4.5e-4
+with_stoch: True # PZ: enables ce0, ce1, ce2 (will be depreciated)
+with_nnlo_counterterm: False # PZ: enables cr4, cr6 (will be depreciated, since we now have a list of parameters)
+
+eft_prior:
+     b1:
+          type: flat
+          range: null
+     c2:
+          type: flat
+          range: null
+     c4:
+          type: unvaried
+     b3:
+          type: marg_gauss
+          mean: [0., 0.]
+          range: [2., 2.]
+     cct:
+          type: marg_gauss
+          mean: [0., 0.]
+          range: [2., 2.]
+     cr1:
+          type: marg_gauss
+          mean: [0., 0.]
+          range: [8., 8.]
+     cr2: #
+          type: unvaried
+#          type: marg_gauss #Uncomment for the hexadecapole !
+#          mean: [0., 0.]
+#          range: [8., 8.]
+     ce0: # k^0 stochastic
+          type: marg_gauss
+          mean: [0., 0.]
+          range: [2., 2.]
+     ce1:
+          type: unvaried
+#          type: marg_gauss
+#          mean: [0., 0.]
+#          range: [2., 2.]
+     ce2: # k^2 quadrupole stochastic
+          type: marg_gauss
+          mean: [0., 0.]
+          range: [2., 2.]

@@ -1,0 +1,3 @@
+eft_boss_cmass_bao.configfile = data.path['root'] + '/montepython/config_pybird/config_cmass_bao.yaml'
+eft_boss_cmass_bao.use_nuisance = ['b1_hN', 'c2_hN', 'b1_hS', 'c2_hS']
+eft_boss_cmass_bao.data_directory = data.path['data']

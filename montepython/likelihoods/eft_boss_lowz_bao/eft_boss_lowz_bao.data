@@ -1,0 +1,4 @@
+
+eft_boss_lowz_bao.configfile = data.path['root'] + '/montepython/config_pybird/config_lowz_bao.yaml'
+eft_boss_lowz_bao.use_nuisance = ['b1_lN', 'c2_lN', 'b1_lS', 'c2_lS']
+eft_boss_lowz_bao.data_directory = data.path['data']
