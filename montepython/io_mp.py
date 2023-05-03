@@ -298,7 +298,7 @@ def create_output_files(command_line, data):
             print('Creating %s\n' % data.out_name)
         else:
             # Only running one chain
-            data.out_name = os.path.join(command_line.folder, outname_base)+suffix+'.txt'
+            data.out_name = os.path.join(command_line.folder, outname_base)+str(suffix)+'.txt'
             data.out = open(data.out_name, 'w')
             print('Creating %s\n' % data.out_name)
     else:
