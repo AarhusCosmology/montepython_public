@@ -275,16 +275,16 @@ def create_output_files(command_line, data):
         suffix += 1
 
         # check for MPI
-        use_mpi = False
+        single_process = True
         try:
             from mpi4py import MPI
             comm = MPI.COMM_WORLD
-            rank = comm.Get_rank()
-            use_mpi = True
+            size = comm.Get_size()
+            single_process = size == 1
         except:
-            use_mpi = False
+            single_process = True
 
-        if use_mpi:
+        if not single_process:
             while trying:
                 data.out = open(os.path.join(
                     command_line.folder, outname_base)+str(suffix)+'.txt', 'w')
