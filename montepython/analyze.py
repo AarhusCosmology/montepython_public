@@ -571,7 +571,7 @@ def compute_posterior(information_instances):
                     # number of bins here.
                     info.chain[:, info.native_index+2], bins=info.bins,
                     #info.chain[:, info.native_index+2], bins=2*info.bins,
-                    weights=info.chain[:, 0], density=False, density=False)
+                    weights=info.chain[:, 0], density=False)
                 info.hist = info.hist/info.hist.max()
                 # Correct for temperature
                 info.hist = info.hist**conf.temperature
