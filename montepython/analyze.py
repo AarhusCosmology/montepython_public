@@ -380,7 +380,7 @@ def compute_posterior(information_instances):
 
     # Pre configuration of the output, note that changes to the font size
     # will occur later on as well, to obtain a nice scaling.
-    matplotlib.rc('text', usetex=True)
+    matplotlib.rc('text', usetex=False)
     matplotlib.rc('font', size=11)
     matplotlib.rc('xtick', labelsize='8')
     matplotlib.rc('ytick', labelsize='8')
