@@ -277,7 +277,6 @@ def create_output_files(command_line, data):
 
         data.out = open(os.path.join(
         command_line.folder, outname_base)+str(suffix)+'.txt', 'w')
-        lock(data.out, fcntl.LOCK_EX | fcntl.LOCK_NB)
         data.out_name = os.path.join(
             command_line.folder, outname_base)+str(suffix)+'.txt'
         print('Creating %s\n' % data.out_name)
