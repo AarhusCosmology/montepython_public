@@ -265,22 +265,19 @@ def create_output_files(command_line, data):
 
     # output file
     outname_base = '{0}_{1}__'.format(date.today(), number)
-    suffix = 0
-    trying = True
     if command_line.chain_number is None:
-        for files in os.listdir(command_line.folder):
-            if files.find(outname_base) != -1:
-                if int(files.split('__')[-1].split('.')[0]) > suffix:
-                    suffix = int(files.split('__')[-1].split('.')[0])
-        suffix += 1
-        while trying:
-            data.out = open(os.path.join(
-                command_line.folder, outname_base)+str(suffix)+'.txt', 'w')
-            try:
-                lock(data.out, fcntl.LOCK_EX | fcntl.LOCK_NB)
-                trying = False
-            except LockError:
-                suffix += 1
+        try:
+            from mpi4py import MPI
+            comm = MPI.COMM_WORLD
+            rank = comm.Get_rank()
+        except:
+            rank = 0
+
+        suffix = rank + 1
+
+        data.out = open(os.path.join(
+        command_line.folder, outname_base)+str(suffix)+'.txt', 'w')
+        lock(data.out, fcntl.LOCK_EX | fcntl.LOCK_NB)
         data.out_name = os.path.join(
             command_line.folder, outname_base)+str(suffix)+'.txt'
         print('Creating %s\n' % data.out_name)
