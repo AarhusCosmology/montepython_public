@@ -240,7 +240,7 @@ def refresh_file(data):
     data.out = open(data.out_name, 'a')
 
 
-def create_output_files(command_line, data):
+def create_output_files(command_line, data, rank):
     """
     Automatically create a new name for the chain.
 
@@ -265,30 +265,30 @@ def create_output_files(command_line, data):
 
     # output file
     outname_base = '{0}_{1}__'.format(date.today(), number)
-    suffix = 0
-    trying = True
-    if command_line.chain_number is None:
-        for files in os.listdir(command_line.folder):
-            if files.find(outname_base) != -1:
-                if int(files.split('__')[-1].split('.')[0]) > suffix:
-                    suffix = int(files.split('__')[-1].split('.')[0])
-        suffix += 1
-        while trying:
-            data.out = open(os.path.join(
-                command_line.folder, outname_base)+str(suffix)+'.txt', 'w')
-            try:
-                lock(data.out, fcntl.LOCK_EX | fcntl.LOCK_NB)
-                trying = False
-            except LockError:
-                suffix += 1
-        data.out_name = os.path.join(
-            command_line.folder, outname_base)+str(suffix)+'.txt'
-        print('Creating %s\n' % data.out_name)
-    else:
-        data.out_name = os.path.join(
-            command_line.folder, outname_base)+command_line.chain_number+'.txt'
-        data.out = open(data.out_name, 'w')
-        print('Creating %s\n' % data.out_name)
+    suffix = rank+1
+    #trying = True
+    #if command_line.chain_number is None:
+    #    #for files in os.listdir(command_line.folder):
+    #    #    if files.find(outname_base) != -1:
+    #    #        if int(files.split('__')[-1].split('.')[0]) > suffix:
+    #    #            suffix = int(files.split('__')[-1].split('.')[0])
+    #    suffix = rank+1#+= 1
+    #    #while trying:
+    #    #    data.out = open(os.path.join(
+    #    #        command_line.folder, outname_base)+str(suffix)+'.txt', 'w')
+    #    #    try:
+    #    #        lock(data.out, fcntl.LOCK_EX | fcntl.LOCK_NB)
+    #    #        trying = False
+    #    #    except LockError:
+    #    #        suffix += 1
+    #    data.out_name = os.path.join(
+    #        command_line.folder, outname_base)+str(suffix)+'.txt'
+    #    print('Creating %s\n' % data.out_name)
+    #else:
+    data.out_name = os.path.join(
+        command_line.folder, outname_base)+str(suffix)+'.txt'
+    data.out = open(data.out_name, 'w')
+    print('Creating %s\n' % data.out_name)
     # in case of a restart, copying the whole thing in the new file
     if command_line.restart is not None:
         # Construct filename of old chain from input.

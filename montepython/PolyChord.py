@@ -191,9 +191,22 @@ PC_user_arguments = {
         '(Default: exp(-1))\n'
         'How often to update the files and do clustering.'
         )
-        }
+        },
+    'grade_dims' :
+        {'type': int,
+                'help':(
+        '(Default: TBD\n'
+        'TBD.'
+        )
+	},
+    'grade_frac' :
+        {'type': float,
+                'help':(
+        'TBD\n'
+        'TBD.'
+        )
+	}
     }
-
 
 # Automatically-defined arguments of PyMultiNest, type specified
 PC_auto_arguments = {
@@ -263,6 +276,14 @@ def initialise(cosmo, data, command_line):
         if value != -1:
             data.PC_arguments[arg] = value
         # else: don't define them -> use PyPolyChord default value
+    if type(data.PC_arguments['grade_dims']) == int:
+        data.PC_arguments['grade_dims'] = [data.PC_arguments['grade_dims']]
+    if type(data.PC_arguments['grade_frac']) != list:
+        data.PC_arguments['grade_frac'] = [data.PC_arguments['grade_frac']]
+#    print('grade_dims = ', data.PC_arguments['grade_dims'])
+#    print('grade_frac = ', data.PC_arguments['grade_frac'])
+    data.PC_arguments['num_repeats'] = data.PC_arguments['grade_dims'][0] * 2
+    #sdgh
 
     data.PC_param_names = varying_param_names
 

@@ -22,6 +22,7 @@ from __future__ import print_function
 import numpy as np
 import sys
 import warnings
+import traceback
 
 import io_mp
 from io_mp import dictitems,dictvalues,dictkeys
@@ -747,6 +748,7 @@ def compute_lkl(cosmo, data):
             try:
                 cosmo.compute()
             except CosmoComputationError as failure_message:
+                print('caught by montepython')
                 # could be useful to uncomment for debugging:
                 #np.set_printoptions(precision=30, linewidth=150)
                 #print('cosmo params')
@@ -773,7 +775,15 @@ def compute_lkl(cosmo, data):
 
     for likelihood in dictvalues(data.lkl):
         if likelihood.need_update is True:
-            value = likelihood.loglkl(cosmo, data)
+            try:
+                value = likelihood.loglkl(cosmo, data)
+#                print('likelihood value = ', value)
+                # Storing the result
+                likelihood.backup_value = value
+            except:
+                value = data.boundary_loglike
+                var = traceback.format_exc()
+                print(f'The following error occurred when calling {likelihood.name}: {var}')
             # Storing the result
             likelihood.backup_value = value
         # Otherwise, take the existing value

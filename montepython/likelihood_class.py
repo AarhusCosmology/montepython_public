@@ -189,6 +189,7 @@ class Likelihood(object):
         """
         # get C_l^XX from the cosmological code
         cl = cosmo.lensed_cl(int(l_max))
+#        print(cl.keys(), len(cl['tt']), len(cl['bb']))
 
         # convert dimensionless C_l's to C_l in muK**2
         T = cosmo.T_cmb()
@@ -244,10 +245,12 @@ class Likelihood(object):
             Desired precision for some cosmological parameters
 
         """
-        array_flag = False
-        num_flag = True
+#        array_flag = False
+#        num_flag = True
 
         for key, value in dictitems(dictionary):
+            array_flag = False
+            num_flag = True
             try:
                 data.cosmo_arguments[key]
                 try:

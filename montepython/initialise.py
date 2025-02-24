@@ -82,7 +82,7 @@ def initialise(custom_command=''):
         # Initialising the sampler
         # MH: Creating the file that will contain the chain
         if command_line.method == 'MH':
-            io_mp.create_output_files(command_line, data)
+            io_mp.create_output_files(command_line, data, rank)
         # NS: Creating the NS subfolder and the MultiNest arguments
         elif command_line.method == 'NS':
             from MultiNest import initialise as initialise_mn
